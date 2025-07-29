@@ -13,7 +13,7 @@ creds = service_account.Credentials.from_service_account_info(
 )
 
 client = gspread.authorize(creds)
-sheet = client.open("Your Google Sheet Name").sheet1  # Replace with your sheet name
+sheet = client.open("HSE OBS").sheet1  # Replace with your sheet name
 
 # Streamlit UI
 st.title("📋 Feedback Form")
