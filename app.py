@@ -6,7 +6,7 @@ from datetime import datetime
 
 # --- User Credentials with Roles ---
 USER_CREDENTIALS = {
-    "Rahul": {"password": "1234", "role": "user"},
+    "Rahul": {"password": "1234", "role": "admin"},
     "admin": {"password": "admin", "role": "admin"}
 }
 
@@ -252,3 +252,4 @@ def main():
 # --- Run App ---
 if __name__ == "__main__":
     main()
+
