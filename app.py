@@ -214,7 +214,7 @@ def show_equipment_form(sheet):
             "T.P Card type": tp_card_type,
             "T.P Card expiry date": tp_card_expiry,
             "Q.R code": qr_code,
-            "PWAS status": pwas_status,   # NOTE: header is lowercase 'status'
+            "PWAS status": pwas_status,
             "F.E TP expiry": fe_tp_expiry,
             "FA box Status": fa_box_status,
             "Documents": documents
