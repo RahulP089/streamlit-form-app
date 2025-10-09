@@ -59,13 +59,13 @@ def get_sheets():
         return ws
 
     heavy_equip_headers = [
-        "Equipment type", "Plate No.", "Asset code", "T.P inspection date", "T.P Expiry date",
+        "Equipment type","Make",Plate No.", "Asset code", "T.P inspection date", "T.P Expiry date",
         "Insurance expiry date", "Operator Name", "Iqama NO", "T.P Card type", "T.P Card expiry date",
         "Q.R code", "PWAS status", "F.E TP expiry", "FA box Status", "Documents"
     ]
 
     heavy_vehicle_headers = [
-        "Vehicle Type","Make", "Plate No", "Asset Code", "MVPI Expiry date", "Insurance Expiry",
+        "Vehicle Type", "Plate No", "Asset Code", "MVPI Expiry date", "Insurance Expiry",
         "Driver Name", "Iqama No", "Licence Expiry", "Q.R code", "F.A Box",
         "Fire Extinguisher T.P Expiry", "PWAS Status", "Seat belt damaged", "Tyre Condition",
         "Suspension Systems", "Remarks"
@@ -184,6 +184,7 @@ def show_equipment_form(sheet):
 
     with st.form("equipment_form", clear_on_submit=True):  
         equipment_type = st.selectbox("Equipment type", EQUIPMENT_LIST)
+        make= st.text_input("Make")
         plate_no = st.text_input("Plate No.")
         asset_code = st.text_input("Asset code")
         tp_insp_date = st.date_input("T.P inspection date").strftime("%Y-%m-%d")
@@ -408,4 +409,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
