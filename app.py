@@ -42,11 +42,8 @@ def get_sheets():
     )
     client = gspread.authorize(creds)
 
-    # observation and permit are separate spreadsheets (use first sheet)
     obs_sheet = client.open_by_url(OBSERVATION_URL).sheet1
     permit_sheet = client.open_by_url(PERMIT_URL).sheet1
-
-    # equipment workbook (may contain multiple tabs)
     wb = client.open_by_url(EQUIPMENT_URL)
 
     def get_or_create(ws_title, headers=None):
@@ -59,13 +56,13 @@ def get_sheets():
         return ws
 
     heavy_equip_headers = [
-        "Equipment type","Plate No.", "Asset code", "T.P inspection date", "T.P Expiry date",
+        "Equipment type", "Make", "Plate No.", "Asset code", "T.P inspection date", "T.P Expiry date",
         "Insurance expiry date", "Operator Name", "Iqama NO", "T.P Card type", "T.P Card expiry date",
         "Q.R code", "PWAS status", "F.E TP expiry", "FA box Status", "Documents"
     ]
 
     heavy_vehicle_headers = [
-        "Vehicle Type", "Plate No", "Asset Code", "MVPI Expiry date", "Insurance Expiry",
+        "Vehicle Type", "Make", "Plate No", "Asset Code", "MVPI Expiry date", "Insurance Expiry",
         "Driver Name", "Iqama No", "Licence Expiry", "Q.R code", "F.A Box",
         "Fire Extinguisher T.P Expiry", "PWAS Status", "Seat belt damaged", "Tyre Condition",
         "Suspension Systems", "Remarks"
@@ -184,6 +181,7 @@ def show_equipment_form(sheet):
 
     with st.form("equipment_form", clear_on_submit=True):  
         equipment_type = st.selectbox("Equipment type", EQUIPMENT_LIST)
+        make = st.text_input("Make")
         plate_no = st.text_input("Plate No.")
         asset_code = st.text_input("Asset code")
         tp_insp_date = st.date_input("T.P inspection date").strftime("%Y-%m-%d")
@@ -204,6 +202,7 @@ def show_equipment_form(sheet):
 
         data = {
             "Equipment type": equipment_type,
+            "Make": make,
             "Plate No.": plate_no,
             "Asset code": asset_code,
             "T.P inspection date": tp_insp_date,
@@ -238,6 +237,7 @@ def show_heavy_vehicle_form(sheet):
         ]
 
         vehicle_type = st.selectbox("Vehicle Type", VEHICLE_LIST)
+        make = st.text_input("Make")
         plate_no = st.text_input("Plate No")
         asset_code = st.text_input("Asset Code")
         mvpi_expiry = st.date_input("MVPI Expiry date")
@@ -261,6 +261,7 @@ def show_heavy_vehicle_form(sheet):
 
         data = {
             "Vehicle Type": vehicle_type,
+            "Make": make,
             "Plate No": plate_no,
             "Asset Code": asset_code,
             "MVPI Expiry date": mvpi_expiry.strftime("%Y-%m-%d"),
@@ -289,12 +290,10 @@ def show_heavy_vehicle_form(sheet):
 def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_vehicle_sheet):
     st.header("📊 Dashboard")
 
-    # Tabs for all dashboards
     tab_obs, tab_permit, tab_eqp, tab_veh = st.tabs([
         "📋 Observation", "🛠️ Permit", "🚜 Heavy Equipment", "🚚 Heavy Vehicle"
     ])
 
-    # ---------- Observation Dashboard ----------
     with tab_obs:
         df = pd.DataFrame(obs_sheet.get_all_records())
         if df.empty:
@@ -303,7 +302,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             st.subheader("Observation Records")
             st.dataframe(df)
 
-    # ---------- Permit Dashboard ----------
     with tab_permit:
         df = pd.DataFrame(permit_sheet.get_all_records())
         if df.empty:
@@ -312,7 +310,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             st.subheader("Permit Records")
             st.dataframe(df)
 
-    # ---------- Heavy Equipment Dashboard ----------
     with tab_eqp:
         df = pd.DataFrame(heavy_equip_sheet.get_all_records())
         st.subheader("Heavy Equipment Overview")
@@ -320,17 +317,13 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         if df.empty:
             st.info("No Heavy Equipment data.")
         else:
-            # KPIs
             st.metric("Total Equipment", len(df))
-
-            # Count by Equipment type (header: 'Equipment type')
             if "Equipment type" in df.columns:
                 cnt = df["Equipment type"].value_counts().reset_index()
                 cnt.columns = ["Equipment type", "Count"]
                 fig = px.bar(cnt, x="Equipment type", y="Count", title="Count by Equipment Type")
                 st.plotly_chart(fig, use_container_width=True)
 
-            # Expiry alerts (use headers from equipment tab)
             for col in ["T.P Expiry date", "Insurance expiry date", "F.E TP expiry", "T.P Card expiry date"]:
                 if col in df.columns:
                     df[col] = df[col].apply(badge_expiry)
@@ -338,7 +331,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             with st.expander("📋 Show Equipment Data (with Expiry Alerts)"):
                 st.dataframe(df)
 
-    # ---------- Heavy Vehicle Dashboard ----------
     with tab_veh:
         df = pd.DataFrame(heavy_vehicle_sheet.get_all_records())
         st.subheader("Heavy Vehicle Overview")
@@ -346,17 +338,13 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         if df.empty:
             st.info("No Heavy Vehicle data.")
         else:
-            # KPIs
             st.metric("Total Vehicles", len(df))
-
-            # Count by Vehicle type
             if "Vehicle Type" in df.columns:
                 cntv = df["Vehicle Type"].value_counts().reset_index()
                 cntv.columns = ["Vehicle Type", "Count"]
                 fig2 = px.bar(cntv, x="Vehicle Type", y="Count", title="Count by Vehicle Type")
                 st.plotly_chart(fig2, use_container_width=True)
 
-            # Pie charts if columns exist
             if "PWAS Status" in df.columns:
                 st.plotly_chart(px.pie(df, names="PWAS Status", title="PWAS Status"), use_container_width=True)
             if "Tyre Condition" in df.columns:
@@ -364,7 +352,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             if "Suspension Systems" in df.columns:
                 st.plotly_chart(px.pie(df, names="Suspension Systems", title="Suspension Systems"), use_container_width=True)
 
-            # Expiry alerts
             for col in ["MVPI Expiry date", "Insurance Expiry", "Licence Expiry", "Fire Extinguisher T.P Expiry"]:
                 if col in df.columns:
                     df[col] = df[col].apply(badge_expiry)
@@ -408,7 +395,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
