@@ -65,7 +65,7 @@ def get_sheets():
     ]
 
     heavy_vehicle_headers = [
-        "Vehicle Type", "Plate No", "Asset Code", "MVPI Expiry date", "Insurance Expiry",
+        "Vehicle Type","Make", "Plate No", "Asset Code", "MVPI Expiry date", "Insurance Expiry",
         "Driver Name", "Iqama No", "Licence Expiry", "Q.R code", "F.A Box",
         "Fire Extinguisher T.P Expiry", "PWAS Status", "Seat belt damaged", "Tyre Condition",
         "Suspension Systems", "Remarks"
@@ -408,3 +408,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
