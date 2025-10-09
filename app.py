@@ -59,7 +59,7 @@ def get_sheets():
         return ws
 
     heavy_equip_headers = [
-        "Equipment type",Plate No.", "Asset code", "T.P inspection date", "T.P Expiry date",
+        "Equipment type","Plate No.", "Asset code", "T.P inspection date", "T.P Expiry date",
         "Insurance expiry date", "Operator Name", "Iqama NO", "T.P Card type", "T.P Card expiry date",
         "Q.R code", "PWAS status", "F.E TP expiry", "FA box Status", "Documents"
     ]
@@ -408,6 +408,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
