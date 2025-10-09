@@ -21,14 +21,12 @@ HEAVY_VEHICLE_TAB = "Heavy Vehicles"
 
 # -------------------- UTILITIES --------------------
 def parse_date(s: str):
-    """Safely parse YYYY-MM-DD to date, else return None."""
     try:
         return datetime.strptime(str(s), "%Y-%m-%d").date()
     except Exception:
         return None
 
 def badge_expiry(date_str: str):
-    """Return 🚨 if expired, ✅ if valid, keep as-is if blank/invalid."""
     d = parse_date(date_str)
     if d is None:
         return date_str
@@ -56,13 +54,13 @@ def get_sheets():
         return ws
 
     heavy_equip_headers = [
-        "Equipment type", "Make", "Plate No.", "Asset code", "T.P inspection date", "T.P Expiry date",
+        "Equipment type", "Make", "Plate No.", "Asset code", "Owner", "T.P inspection date", "T.P Expiry date",
         "Insurance expiry date", "Operator Name", "Iqama NO", "T.P Card type", "T.P Card expiry date",
         "Q.R code", "PWAS status", "F.E TP expiry", "FA box Status", "Documents"
     ]
 
     heavy_vehicle_headers = [
-        "Vehicle Type", "Make", "Plate No", "Asset Code", "MVPI Expiry date", "Insurance Expiry",
+        "Vehicle Type", "Make", "Plate No", "Asset Code", "Owner", "MVPI Expiry date", "Insurance Expiry",
         "Driver Name", "Iqama No", "Licence Expiry", "Q.R code", "F.A Box",
         "Fire Extinguisher T.P Expiry", "PWAS Status", "Seat belt damaged", "Tyre Condition",
         "Suspension Systems", "Remarks"
@@ -184,6 +182,7 @@ def show_equipment_form(sheet):
         make = st.text_input("Make")
         plate_no = st.text_input("Plate No.")
         asset_code = st.text_input("Asset code")
+        owner = st.text_input("Owner")
         tp_insp_date = st.date_input("T.P inspection date").strftime("%Y-%m-%d")
         tp_expiry = st.date_input("T.P Expiry date").strftime("%Y-%m-%d")
         insurance_expiry = st.date_input("Insurance expiry date").strftime("%Y-%m-%d")
@@ -205,6 +204,7 @@ def show_equipment_form(sheet):
             "Make": make,
             "Plate No.": plate_no,
             "Asset code": asset_code,
+            "Owner": owner,
             "T.P inspection date": tp_insp_date,
             "T.P Expiry date": tp_expiry,
             "Insurance expiry date": insurance_expiry,
@@ -240,6 +240,7 @@ def show_heavy_vehicle_form(sheet):
         make = st.text_input("Make")
         plate_no = st.text_input("Plate No")
         asset_code = st.text_input("Asset Code")
+        owner = st.text_input("Owner")
         mvpi_expiry = st.date_input("MVPI Expiry date")
         insurance_expiry = st.date_input("Insurance Expiry")
         driver_name = st.text_input("Driver Name")
@@ -264,6 +265,7 @@ def show_heavy_vehicle_form(sheet):
             "Make": make,
             "Plate No": plate_no,
             "Asset Code": asset_code,
+            "Owner": owner,
             "MVPI Expiry date": mvpi_expiry.strftime("%Y-%m-%d"),
             "Insurance Expiry": insurance_expiry.strftime("%Y-%m-%d"),
             "Driver Name": driver_name,
@@ -286,7 +288,7 @@ def show_heavy_vehicle_form(sheet):
             except Exception as e:
                 st.error(f"❌ Error: {e}")
 
-# -------------------- DASHBOARD (ALL SECTIONS) --------------------
+# -------------------- DASHBOARD --------------------
 def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_vehicle_sheet):
     st.header("📊 Dashboard")
 
@@ -395,3 +397,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+``
+
+
