@@ -198,40 +198,41 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         if df.empty:
             st.info("No Heavy Equipment data available.")
         else:
-            # Clean data
             for col in ["T.P Expiry date", "Insurance expiry date", "T.P Card expiry date", "F.E TP expiry"]:
                 if col in df.columns:
                     df[col] = df[col].astype(str)
 
             # Summary metrics
-            st.metric("Total Equipments", len(df))
-            st.metric("Unique Equipment Types", df["Equipment type"].nunique())
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Total Equipments", len(df))
+            with col2:
+                st.metric("Unique Equipment Types", df["Equipment type"].nunique())
 
-            # Graph 1: Equipment type count
-            fig1 = px.bar(df["Equipment type"].value_counts().reset_index(),
-                          x="index", y="Equipment type",
-                          labels={"index": "Equipment Type", "Equipment type": "Count"},
-                          title="Equipment Type Count")
+            # Equipment type count
+            type_counts = df["Equipment type"].value_counts().reset_index()
+            type_counts.columns = ["Equipment Type", "Count"]
+            fig1 = px.bar(type_counts, x="Equipment Type", y="Count", text_auto=True, color="Equipment Type", title="Equipment Type Count")
             st.plotly_chart(fig1, use_container_width=True)
 
-            # Graph 2: T.P Expiry Status
+            # T.P Expiry Status
             df["T.P Status"] = df["T.P Expiry date"].apply(expiry_status)
-            fig2 = px.pie(df, names="T.P Status", title="T.P Expiry Status")
+            fig2 = px.pie(df, names="T.P Status", title="T.P Expiry Status", color="T.P Status")
             st.plotly_chart(fig2, use_container_width=True)
 
-            # Graph 3: Insurance Expiry Status
+            # Insurance Expiry Status
             df["Insurance Status"] = df["Insurance expiry date"].apply(expiry_status)
-            fig3 = px.pie(df, names="Insurance Status", title="Insurance Expiry Status")
+            fig3 = px.pie(df, names="Insurance Status", title="Insurance Expiry Status", color="Insurance Status")
             st.plotly_chart(fig3, use_container_width=True)
 
-            # Graph 4: PWAS Status Distribution
-            fig4 = px.bar(df["PWAS status"].value_counts().reset_index(),
-                          x="index", y="PWAS status",
-                          labels={"index": "PWAS Status", "PWAS status": "Count"},
-                          title="PWAS Status Distribution")
-            st.plotly_chart(fig4, use_container_width=True)
+            # PWAS Status Distribution
+            if "PWAS status" in df.columns:
+                pwas_counts = df["PWAS status"].value_counts().reset_index()
+                pwas_counts.columns = ["PWAS Status", "Count"]
+                fig4 = px.bar(pwas_counts, x="PWAS Status", y="Count", text_auto=True, color="PWAS Status", title="PWAS Status Distribution")
+                st.plotly_chart(fig4, use_container_width=True)
 
-            # Show table with expiry badges
+            # Show table with badges
             for col in ["T.P Expiry date", "Insurance expiry date", "T.P Card expiry date", "F.E TP expiry"]:
                 if col in df.columns:
                     df[col] = df[col].apply(badge_expiry)
@@ -273,13 +274,16 @@ def main():
 
 # -------------------- PLACEHOLDER FOR OTHER FORMS --------------------
 def show_observation_form(sheet):
-    pass  # keep your original form code here
+    st.header("📋 Observation Form")
+    st.write("Add your Observation form code here")
 
 def show_permit_form(sheet):
-    pass  # keep your original form code here
+    st.header("🛠️ Permit Form")
+    st.write("Add your Permit form code here")
 
 def show_heavy_vehicle_form(sheet):
-    pass  # keep your original form code here
+    st.header("🚚 Heavy Vehicle Form")
+    st.write("Add your Heavy Vehicle form code here")
 
 if __name__ == "__main__":
     main()
