@@ -70,7 +70,7 @@ def get_sheets():
         return ws
 
     heavy_equip_headers = [
-        "Equipment type", "Make", "Plate No.", "Asset code", "Owner", "T.P inspection date", "T.P Expiry date",
+        "Equipment type", "Make", "Plate No", "Asset code", "Owner", "T.P inspection date", "T.P Expiry date", # <-- CHANGE 1: Removed period
         "Insurance expiry date", "Operator Name", "Iqama NO", "T.P Card type", "T.P Card Number",
         "T.P Card expiry date", "Q.R code", "PWAS status", "F.E TP expiry",
         "FA box Status", "Documents"
@@ -147,7 +147,7 @@ def show_equipment_form(sheet):
         cols = st.columns(2)
         equipment_type = cols[0].selectbox("Equipment type", EQUIPMENT_LIST)
         make = cols[1].text_input("Make")
-        plate_no = cols[0].text_input("Plate No.")
+        plate_no = cols[0].text_input("Plate No") # <-- CHANGE 2: Updated label for consistency
         asset_code = cols[1].text_input("Asset code")
         owner = cols[0].text_input("Owner")
         tp_insp_date = cols[1].date_input("T.P inspection date")
@@ -212,7 +212,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                     if today <= row[col] <= fifteen_days_later:
                         expiring_soon_records.append({
                             "Equipment Type": row["Equipment type"],
-                            "Plate No.": row["Plate No."],
+                            "Plate No": row["Plate No"], # <-- CHANGE 3: Removed period to match header
                             "Item Expiring": col.replace(' expiry date', '').replace(' Expiry', ''),
                             "Expiry Date": row[col].strftime("%Y-%m-%d")
                         })
