@@ -288,8 +288,29 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 df_equip[col] = df_equip[col].apply(parse_date)
 
         today = date.today()
-        # MODIFIED: Changed threshold from 30 days to 10 days
         ten_days = today + timedelta(days=10)
+
+        # --- [NEW] T.P Card Specific Expiry Alert ---
+        st.subheader("🚨 T.P Card Expiry Alerts")
+        tp_card_col = "T.P Card expiry date"
+        if tp_card_col in df_equip.columns:
+            tp_alert_df = df_equip.loc[df_equip[tp_card_col] <= ten_days].copy()
+            
+            if tp_alert_df.empty:
+                st.success("✅ No T.P cards are expired or expiring within 10 days.")
+            else:
+                tp_alert_df["Status"] = tp_alert_df[tp_card_col].apply(
+                    lambda d: "Expired" if d < today else "Expiring Soon"
+                )
+                st.dataframe(
+                    tp_alert_df[["Equipment type", "Plate No", "Owner", tp_card_col, "Status"]],
+                    use_container_width=True
+                )
+        else:
+            st.warning("Column 'T.P Card expiry date' not found.")
+        
+        st.markdown("---")
+
 
         # --- KPIs ---
         total_equipment = len(df_equip)
@@ -299,26 +320,23 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         for col in date_cols:
              if col in df_equip.columns:
                 expired_count += df_equip[df_equip[col] < today].shape[0]
-                # MODIFIED: Using ten_days variable for calculation
                 expiring_soon_count += df_equip[(df_equip[col] >= today) & (df_equip[col] <= ten_days)].shape[0]
 
         kpi1, kpi2, kpi3 = st.columns(3)
         kpi1.metric(label="Total Equipment", value=total_equipment)
         kpi2.metric(label="Total Expired Items", value=expired_count, delta="Action Required", delta_color="inverse")
-        # MODIFIED: Updated KPI label
         kpi3.metric(label="Expiring in 10 Days", value=expiring_soon_count, delta="Monitor Closely", delta_color="off")
 
         st.markdown("---")
 
-        # --- Expiry Alerts Section ---
-        st.subheader("🚨 Expiry Alerts")
+        # --- General Expiry Alerts Section (All Documents) ---
+        st.subheader("🔍 All Document Expiry Alerts")
         expired_dfs = []
         for col in date_cols:
             if col in df_equip.columns:
                 required_cols = ["Equipment type", "Plate No", "Owner", col]
                 
                 if all(c in df_equip.columns for c in required_cols):
-                    # MODIFIED: Filtering with ten_days variable
                     expired_df = df_equip.loc[df_equip[col] <= ten_days, required_cols].copy()
                     expired_df.rename(columns={col: "Expiry Date"}, inplace=True)
                     expired_df["Document Type"] = col.replace(" date", "").replace(" expiry", "")
@@ -343,7 +361,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
 
         with c1:
             if 'Equipment type' in df_equip.columns:
-                # ADDED: text_auto=True to display values
                 fig_type = px.bar(
                     df_equip['Equipment type'].value_counts().reset_index(),
                     x='Equipment type', y='count', title='Equipment Distribution by Type',
@@ -362,7 +379,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 st.plotly_chart(fig_pwas, use_container_width=True)
             
         if 'Owner' in df_equip.columns:
-            # ADDED: text_auto=True to display values
             fig_owner = px.bar(
                 df_equip['Owner'].value_counts().nlargest(10).reset_index(),
                 x='Owner', y='count', title='Top 10 Equipment Owners',
