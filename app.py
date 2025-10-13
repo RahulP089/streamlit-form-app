@@ -63,9 +63,10 @@ def get_sheets():
             if headers:
                 ws.append_row(headers)
         return ws
-
+    
+    # CORRECTED: Headers now match your sheet exactly, including "Palte No."
     heavy_equip_headers = [
-        "Equipment type", "Make", "Plate No", "Asset code", "Owner", "T.P inspection date", "T.P Expiry date",
+        "Equipment type", "Make", "Palte No.", "Asset code", "Owner", "T.P inspection date", "T.P Expiry date",
         "Insurance expiry date", "Operator Name", "Iqama NO", "T.P Card type", "T.P Card Number",
         "T.P Card expiry date", "Q.R code", "PWAS status", "F.E TP expiry",
         "FA box Status", "Documents"
@@ -140,7 +141,8 @@ def show_equipment_form(sheet):
         cols = st.columns(2)
         equipment_type = cols[0].selectbox("Equipment type", EQUIPMENT_LIST)
         make = cols[1].text_input("Make")
-        plate_no = cols[0].text_input("Plate No")
+        # CORRECTED: Form label matches the header
+        plate_no = cols[0].text_input("Palte No.")
         asset_code = cols[1].text_input("Asset code")
         owner = cols[0].text_input("Owner")
         operator_name = cols[1].text_input("Operator Name")
@@ -177,7 +179,6 @@ def show_equipment_form(sheet):
 
 def show_observation_form(sheet):
     st.header("📋 Daily HSE Site Observation Entry Form")
-    # ... (code is unchanged)
     well_numbers = ["2334", "2556", "1858", "2433", "2553", "2447"]
     with st.form("obs_form", clear_on_submit=True):
         form_date = st.date_input("Date")
@@ -203,7 +204,6 @@ def show_observation_form(sheet):
 
 def show_permit_form(sheet):
     st.header("🛠️ Daily Internal Permit Log")
-    # ... (code is unchanged)
     with st.form("permit_form", clear_on_submit=True):
         data = {
             "AREA": st.text_input("Area"),
@@ -225,7 +225,6 @@ def show_permit_form(sheet):
 
 def show_heavy_vehicle_form(sheet):
     st.header("🚚 Heavy Vehicle Entry Form")
-    # ... (code is unchanged)
     VEHICLE_LIST = ["Bus", "Dump Truck", "Low Bed", "Trailer", "Water Tanker", "Mini Bus", "Flat Truck"]
     with st.form("vehicle_form", clear_on_submit=True):
         vehicle_type = st.selectbox("Vehicle Type", VEHICLE_LIST)
@@ -290,28 +289,24 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         today = date.today()
         ten_days = today + timedelta(days=10)
 
-        # --- [RECTIFIED] T.P Card Specific Expiry Alert ---
+        # --- T.P Card Specific Expiry Alert ---
         st.subheader("🚨 T.P Card Expiry Alerts")
         tp_card_col = "T.P Card expiry date"
-        tp_required_cols = ["Equipment type", "Plate No", "Owner", tp_card_col]
+        # CORRECTED: Changed "Plate No" to "Palte No." to match your sheet
+        tp_required_cols = ["Equipment type", "Palte No.", "Owner", tp_card_col]
 
-        # Check if ALL required columns exist before proceeding
         if all(col in df_equip.columns for col in tp_required_cols):
-            # Select only the needed columns while filtering
             tp_alert_df = df_equip.loc[df_equip[tp_card_col] <= ten_days, tp_required_cols].copy()
 
             if tp_alert_df.empty:
                 st.success("✅ No T.P cards are expired or expiring within 10 days.")
             else:
-                # Add the Status column for display
                 tp_alert_df["Status"] = tp_alert_df[tp_card_col].apply(
                     lambda d: "Expired" if d < today else "Expiring Soon"
                 )
-                # Display the dataframe which is now guaranteed to have the correct columns
                 st.dataframe(tp_alert_df, use_container_width=True)
         else:
-            # Inform user if essential columns are missing
-            st.warning("Could not generate T.P Card alerts. One or more required columns are missing from the sheet: 'Equipment type', 'Plate No', 'Owner', 'T.P Card expiry date'.")
+            st.warning("Could not generate T.P Card alerts. One or more required columns are missing from the sheet: 'Equipment type', 'Palte No.', 'Owner', 'T.P Card expiry date'.")
         
         st.markdown("---")
 
@@ -338,7 +333,8 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         expired_dfs = []
         for col in date_cols:
             if col in df_equip.columns:
-                required_cols = ["Equipment type", "Plate No", "Owner", col]
+                # CORRECTED: Changed "Plate No" to "Palte No." to match your sheet
+                required_cols = ["Equipment type", "Palte No.", "Owner", col]
                 
                 if all(c in df_equip.columns for c in required_cols):
                     expired_df = df_equip.loc[df_equip[col] <= ten_days, required_cols].copy()
