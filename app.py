@@ -25,19 +25,18 @@ def parse_date(s):
     if isinstance(s, (date, datetime)):
         return s.date() if isinstance(s, datetime) else s
     try:
-        # Handle various common date formats
         return datetime.strptime(str(s).split(' ')[0], "%Y-%m-%d").date()
     except (ValueError, TypeError):
         return None
 
-def badge_expiry(d):
+def badge_expiry(d, expiry_days=10):
     """Creates a visual badge for expiry dates."""
     if d is None:
         return "⚪ Not Set"
     today = date.today()
     if d < today:
         return f"🚨 Expired ({d.strftime('%Y-%m-%d')})"
-    elif d <= today + timedelta(days=30):
+    elif d <= today + timedelta(days=expiry_days):
         return f"⚠️ Expires Soon ({d.strftime('%Y-%m-%d')})"
     else:
         return f"✅ Valid ({d.strftime('%Y-%m-%d')})"
@@ -65,7 +64,6 @@ def get_sheets():
                 ws.append_row(headers)
         return ws
 
-    # CORRECTED: Standardized "Plate No." to "Plate No"
     heavy_equip_headers = [
         "Equipment type", "Make", "Plate No", "Asset code", "Owner", "T.P inspection date", "T.P Expiry date",
         "Insurance expiry date", "Operator Name", "Iqama NO", "T.P Card type", "T.P Card Number",
@@ -131,7 +129,7 @@ def sidebar():
             return sub_menu
         return menu
 
-# -------------------- FORMS (Observation, Permit, Heavy Equipment, Heavy Vehicle) --------------------
+# -------------------- FORMS (UNCHANGED) --------------------
 def show_equipment_form(sheet):
     st.header("🚜 Heavy Equipment Entry Form")
     EQUIPMENT_LIST = [
@@ -142,7 +140,6 @@ def show_equipment_form(sheet):
         cols = st.columns(2)
         equipment_type = cols[0].selectbox("Equipment type", EQUIPMENT_LIST)
         make = cols[1].text_input("Make")
-        # CORRECTED: Standardized "Plate No." to "Plate No" for UI consistency
         plate_no = cols[0].text_input("Plate No")
         asset_code = cols[1].text_input("Asset code")
         owner = cols[0].text_input("Owner")
@@ -180,6 +177,7 @@ def show_equipment_form(sheet):
 
 def show_observation_form(sheet):
     st.header("📋 Daily HSE Site Observation Entry Form")
+    # ... (code is unchanged)
     well_numbers = ["2334", "2556", "1858", "2433", "2553", "2447"]
     with st.form("obs_form", clear_on_submit=True):
         form_date = st.date_input("Date")
@@ -205,6 +203,7 @@ def show_observation_form(sheet):
 
 def show_permit_form(sheet):
     st.header("🛠️ Daily Internal Permit Log")
+    # ... (code is unchanged)
     with st.form("permit_form", clear_on_submit=True):
         data = {
             "AREA": st.text_input("Area"),
@@ -226,6 +225,7 @@ def show_permit_form(sheet):
 
 def show_heavy_vehicle_form(sheet):
     st.header("🚚 Heavy Vehicle Entry Form")
+    # ... (code is unchanged)
     VEHICLE_LIST = ["Bus", "Dump Truck", "Low Bed", "Trailer", "Water Tanker", "Mini Bus", "Flat Truck"]
     with st.form("vehicle_form", clear_on_submit=True):
         vehicle_type = st.selectbox("Vehicle Type", VEHICLE_LIST)
@@ -262,8 +262,7 @@ def show_heavy_vehicle_form(sheet):
             except Exception as e:
                 st.error(f"❌ Error: {e}")
 
-
-# -------------------- ADVANCED DASHBOARD --------------------
+# -------------------- ADVANCED DASHBOARD (UPDATED) --------------------
 def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_vehicle_sheet):
     st.header("📊 Dashboard")
     tab_obs, tab_permit, tab_eqp, tab_veh = st.tabs([
@@ -289,7 +288,8 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 df_equip[col] = df_equip[col].apply(parse_date)
 
         today = date.today()
-        thirty_days = today + timedelta(days=30)
+        # MODIFIED: Changed threshold from 30 days to 10 days
+        ten_days = today + timedelta(days=10)
 
         # --- KPIs ---
         total_equipment = len(df_equip)
@@ -299,12 +299,14 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         for col in date_cols:
              if col in df_equip.columns:
                 expired_count += df_equip[df_equip[col] < today].shape[0]
-                expiring_soon_count += df_equip[(df_equip[col] >= today) & (df_equip[col] <= thirty_days)].shape[0]
+                # MODIFIED: Using ten_days variable for calculation
+                expiring_soon_count += df_equip[(df_equip[col] >= today) & (df_equip[col] <= ten_days)].shape[0]
 
         kpi1, kpi2, kpi3 = st.columns(3)
         kpi1.metric(label="Total Equipment", value=total_equipment)
         kpi2.metric(label="Total Expired Items", value=expired_count, delta="Action Required", delta_color="inverse")
-        kpi3.metric(label="Expiring in 30 Days", value=expiring_soon_count, delta="Monitor Closely", delta_color="off")
+        # MODIFIED: Updated KPI label
+        kpi3.metric(label="Expiring in 10 Days", value=expiring_soon_count, delta="Monitor Closely", delta_color="off")
 
         st.markdown("---")
 
@@ -313,22 +315,21 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         expired_dfs = []
         for col in date_cols:
             if col in df_equip.columns:
-                # FIXED THE KEYERROR HERE by changing "Plate No." to "Plate No"
                 required_cols = ["Equipment type", "Plate No", "Owner", col]
                 
-                # Check if all required columns exist before trying to access them
                 if all(c in df_equip.columns for c in required_cols):
-                    expired_df = df_equip.loc[df_equip[col] <= thirty_days, required_cols].copy()
+                    # MODIFIED: Filtering with ten_days variable
+                    expired_df = df_equip.loc[df_equip[col] <= ten_days, required_cols].copy()
                     expired_df.rename(columns={col: "Expiry Date"}, inplace=True)
                     expired_df["Document Type"] = col.replace(" date", "").replace(" expiry", "")
                     expired_dfs.append(expired_df)
 
         if not expired_dfs:
-             st.success("✅ No equipment documents are expired or expiring within 30 days.")
+             st.success("✅ No equipment documents are expired or expiring within 10 days.")
         else:
             alert_df = pd.concat(expired_dfs, ignore_index=True).sort_values(by="Expiry Date")
             if alert_df.empty:
-                st.success("✅ No equipment documents are expired or expiring within 30 days.")
+                st.success("✅ No equipment documents are expired or expiring within 10 days.")
             else:
                 alert_df["Status"] = alert_df["Expiry Date"].apply(lambda d: "Expired" if d < today else "Expiring Soon")
                 st.dataframe(alert_df, use_container_width=True)
@@ -342,10 +343,12 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
 
         with c1:
             if 'Equipment type' in df_equip.columns:
+                # ADDED: text_auto=True to display values
                 fig_type = px.bar(
                     df_equip['Equipment type'].value_counts().reset_index(),
                     x='Equipment type', y='count', title='Equipment Distribution by Type',
-                    labels={'count': 'Number of Units', 'Equipment type': 'Type'}
+                    labels={'count': 'Number of Units', 'Equipment type': 'Type'},
+                    text_auto=True 
                 )
                 fig_type.update_layout(xaxis_tickangle=-45)
                 st.plotly_chart(fig_type, use_container_width=True)
@@ -359,10 +362,12 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 st.plotly_chart(fig_pwas, use_container_width=True)
             
         if 'Owner' in df_equip.columns:
+            # ADDED: text_auto=True to display values
             fig_owner = px.bar(
                 df_equip['Owner'].value_counts().nlargest(10).reset_index(),
                 x='Owner', y='count', title='Top 10 Equipment Owners',
-                labels={'count': 'Number of Units', 'Owner': 'Owner Name'}
+                labels={'count': 'Number of Units', 'Owner': 'Owner Name'},
+                text_auto=True
             )
             st.plotly_chart(fig_owner, use_container_width=True)
         
@@ -373,7 +378,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         df_display = df_equip.copy()
         for col in date_cols:
              if col in df_display.columns:
-                df_display[col] = df_display[col].apply(badge_expiry)
+                df_display[col] = df_display[col].apply(badge_expiry, expiry_days=10)
         
         st.dataframe(df_display, use_container_width=True)
 
