@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2 import service_account
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import plotly.express as px
 
 # -------------------- USER LOGIN --------------------
@@ -20,20 +20,32 @@ HEAVY_EQUIP_TAB = "Heavy Equipment"
 HEAVY_VEHICLE_TAB = "Heavy Vehicles"
 
 # -------------------- UTILITIES --------------------
-def parse_date(s: str):
+def parse_date(s):
+    """Safely parses a string into a date object."""
+    if isinstance(s, (date, datetime)):
+        return s.date() if isinstance(s, datetime) else s
     try:
-        return datetime.strptime(str(s), "%Y-%m-%d").date()
-    except Exception:
+        # Handle various common date formats
+        return datetime.strptime(str(s).split(' ')[0], "%Y-%m-%d").date()
+    except (ValueError, TypeError):
         return None
 
-def badge_expiry(date_str: str):
-    d = parse_date(date_str)
+def badge_expiry(d):
+    """Creates a visual badge for expiry dates."""
     if d is None:
-        return date_str
-    return ("🚨 " if d < date.today() else "✅ ") + d.strftime("%Y-%m-%d")
+        return "⚪ Not Set"
+    today = date.today()
+    if d < today:
+        return f"🚨 Expired ({d.strftime('%Y-%m-%d')})"
+    elif d <= today + timedelta(days=30):
+        return f"⚠️ Expires Soon ({d.strftime('%Y-%m-%d')})"
+    else:
+        return f"✅ Valid ({d.strftime('%Y-%m-%d')})"
 
 # -------------------- GOOGLE SHEETS CONNECTION --------------------
+@st.cache_resource(ttl=600) # Cache for 10 minutes
 def get_sheets():
+    """Connects to Google Sheets and returns worksheet objects."""
     creds = service_account.Credentials.from_service_account_info(
         st.secrets["gcp_service_account"],
         scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
@@ -53,7 +65,6 @@ def get_sheets():
                 ws.append_row(headers)
         return ws
 
-    # Updated Heavy Equipment Headers
     heavy_equip_headers = [
         "Equipment type", "Make", "Plate No.", "Asset code", "Owner", "T.P inspection date", "T.P Expiry date",
         "Insurance expiry date", "Operator Name", "Iqama NO", "T.P Card type", "T.P Card Number",
@@ -108,80 +119,66 @@ def login():
 def sidebar():
     with st.sidebar:
         st.title("🧭 Navigation")
-        menu = st.selectbox("Go to", [
-            "🏠 Home",
-            "📝 Observation Form",
-            "🛠️ Permit Form",
-            "🏗️ Equipments",
-            "📊 Dashboard",
-            "🚪 Logout"
-        ], key="main_menu")
+        menu_options = [
+            "🏠 Home", "📝 Observation Form", "🛠️ Permit Form",
+            "🏗️ Equipments", "📊 Dashboard", "🚪 Logout"
+        ]
+        menu = st.selectbox("Go to", menu_options, key="main_menu")
 
         if menu == "🏗️ Equipments":
-            sub = st.selectbox("Select Equipment", ["🚜 Heavy Equipment", "🚚 Heavy Vehicle"], key="equip_sub")
-            return sub
+            sub_menu = st.selectbox("Select Equipment", ["🚜 Heavy Equipment", "🚚 Heavy Vehicle"], key="equip_sub")
+            return sub_menu
         return menu
 
-# -------------------- FORMS --------------------
+# -------------------- FORMS (Observation, Permit, Heavy Equipment, Heavy Vehicle) --------------------
 def show_equipment_form(sheet):
     st.header("🚜 Heavy Equipment Entry Form")
-
     EQUIPMENT_LIST = [
-        "Excavator", "Backhoe Loader", "Wheel Loader", "Bulldozer",
-        "Motor Grader", "Compactor / Roller", "Crane", "Forklift",
-        "Boom Truck", "Side Boom", "Hydraulic Drill Unit", "Telehandler", "Skid Loader"
+        "Excavator", "Backhoe Loader", "Wheel Loader", "Bulldozer", "Motor Grader", "Compactor / Roller",
+        "Crane", "Forklift", "Boom Truck", "Side Boom", "Hydraulic Drill Unit", "Telehandler", "Skid Loader"
     ]
-
     with st.form("equipment_form", clear_on_submit=True):
-        equipment_type = st.selectbox("Equipment type", EQUIPMENT_LIST)
-        make = st.text_input("Make")
-        plate_no = st.text_input("Plate No.")
-        asset_code = st.text_input("Asset code")
-        owner = st.text_input("Owner")
-        tp_insp_date = st.date_input("T.P inspection date").strftime("%Y-%m-%d")
-        tp_expiry = st.date_input("T.P Expiry date").strftime("%Y-%m-%d")
-        insurance_expiry = st.date_input("Insurance expiry date").strftime("%Y-%m-%d")
-        operator_name = st.text_input("Operator Name")
-        iqama_no = st.text_input("Iqama NO")
-        tp_card_type = st.selectbox("T.P Card Type", ["SPSP", "Aramco", "PAX", "N/A"])
-        tp_card_number = st.text_input("T.P Card Number")
-        tp_card_expiry = st.date_input("T.P Card expiry date").strftime("%Y-%m-%d")
-        qr_code = st.text_input("Q.R code")
-        pwas_status = st.selectbox("PWAS Status", ["Working", "Not Working", "Alarm Not Audible", "Faulty Camera/Monitor", "N/A"])
-        fe_tp_expiry = st.date_input("F.E TP expiry").strftime("%Y-%m-%d")
-        fa_box_status = st.text_input("FA box Status")
-        documents = st.text_input("Documents")
+        cols = st.columns(2)
+        equipment_type = cols[0].selectbox("Equipment type", EQUIPMENT_LIST)
+        make = cols[1].text_input("Make")
+        plate_no = cols[0].text_input("Plate No.")
+        asset_code = cols[1].text_input("Asset code")
+        owner = cols[0].text_input("Owner")
+        operator_name = cols[1].text_input("Operator Name")
+        iqama_no = cols[0].text_input("Iqama NO")
 
-        data = {
-            "Equipment type": equipment_type,
-            "Make": make,
-            "Plate No.": plate_no,
-            "Asset code": asset_code,
-            "Owner": owner,
-            "T.P inspection date": tp_insp_date,
-            "T.P Expiry date": tp_expiry,
-            "Insurance expiry date": insurance_expiry,
-            "Operator Name": operator_name,
-            "Iqama NO": iqama_no,
-            "T.P Card type": tp_card_type,
-            "T.P Card Number": tp_card_number,
-            "T.P Card expiry date": tp_card_expiry,
-            "Q.R code": qr_code,
-            "PWAS status": pwas_status,
-            "F.E TP expiry": fe_tp_expiry,
-            "FA box Status": fa_box_status,
-            "Documents": documents
-        }
+        st.subheader("Expiry Dates")
+        cols_dates = st.columns(2)
+        tp_insp_date = cols_dates[0].date_input("T.P inspection date").strftime("%Y-%m-%d")
+        tp_expiry = cols_dates[1].date_input("T.P Expiry date").strftime("%Y-%m-%d")
+        insurance_expiry = cols_dates[0].date_input("Insurance expiry date").strftime("%Y-%m-%d")
+        fe_tp_expiry = cols_dates[1].date_input("F.E TP expiry").strftime("%Y-%m-%d")
+        tp_card_expiry = cols_dates[0].date_input("T.P Card expiry date").strftime("%Y-%m-%d")
 
-        if st.form_submit_button("Submit"):
+        st.subheader("T.P Card & Status")
+        cols_status = st.columns(2)
+        tp_card_type = cols_status[0].selectbox("T.P Card Type", ["SPSP", "Aramco", "PAX", "N/A"])
+        tp_card_number = cols_status[1].text_input("T.P Card Number")
+        pwas_status = cols_status[0].selectbox("PWAS Status", ["Working", "Not Working", "Alarm Not Audible", "Faulty Camera/Monitor", "N/A"])
+        fa_box_status = cols_status[1].text_input("FA box Status")
+        qr_code = cols_status[0].text_input("Q.R code")
+        documents = cols_status[1].text_input("Documents")
+
+        if st.form_submit_button("Submit", use_container_width=True):
+            data = [
+                equipment_type, make, plate_no, asset_code, owner, tp_insp_date, tp_expiry,
+                insurance_expiry, operator_name, iqama_no, tp_card_type, tp_card_number,
+                tp_card_expiry, qr_code, pwas_status, fe_tp_expiry, fa_box_status, documents
+            ]
             try:
-                sheet.append_row(list(data.values()))
+                sheet.append_row(data)
                 st.success("✅ Equipment submitted successfully!")
             except Exception as e:
-                st.error(f"❌ Error: {e}")
+                st.error(f"❌ Error submitting data: {e}")
 
 def show_observation_form(sheet):
     st.header("📋 Daily HSE Site Observation Entry Form")
+    # ... (rest of the function is unchanged) ...
     well_numbers = ["2334", "2556", "1858", "2433", "2553", "2447"]
     with st.form("obs_form", clear_on_submit=True):
         form_date = st.date_input("Date")
@@ -207,6 +204,7 @@ def show_observation_form(sheet):
 
 def show_permit_form(sheet):
     st.header("🛠️ Daily Internal Permit Log")
+    # ... (rest of the function is unchanged) ...
     with st.form("permit_form", clear_on_submit=True):
         data = {
             "AREA": st.text_input("Area"),
@@ -225,8 +223,10 @@ def show_permit_form(sheet):
             except Exception as e:
                 st.error(f"❌ Error submitting data: {e}")
 
+
 def show_heavy_vehicle_form(sheet):
     st.header("🚚 Heavy Vehicle Entry Form")
+    # ... (rest of the function is unchanged) ...
     VEHICLE_LIST = ["Bus", "Dump Truck", "Low Bed", "Trailer", "Water Tanker", "Mini Bus", "Flat Truck"]
     with st.form("vehicle_form", clear_on_submit=True):
         vehicle_type = st.selectbox("Vehicle Type", VEHICLE_LIST)
@@ -249,24 +249,12 @@ def show_heavy_vehicle_form(sheet):
         remarks = st.text_input("Remarks")
 
         data = {
-            "Vehicle Type": vehicle_type,
-            "Make": make,
-            "Plate No": plate_no,
-            "Asset Code": asset_code,
-            "Owner": owner,
-            "MVPI Expiry date": mvpi_expiry,
-            "Insurance Expiry": insurance_expiry,
-            "Driver Name": driver_name,
-            "Iqama No": iqama_no,
-            "Licence Expiry": licence_expiry,
-            "Q.R code": qr_code,
-            "F.A Box": fa_box,
-            "Fire Extinguisher T.P Expiry": fire_ext_tp_expiry,
-            "PWAS Status": pwas_status,
-            "Seat belt damaged": seatbelt_damaged,
-            "Tyre Condition": tyre_condition,
-            "Suspension Systems": suspension_systems,
-            "Remarks": remarks
+            "Vehicle Type": vehicle_type, "Make": make, "Plate No": plate_no, "Asset Code": asset_code,
+            "Owner": owner, "MVPI Expiry date": mvpi_expiry, "Insurance Expiry": insurance_expiry,
+            "Driver Name": driver_name, "Iqama No": iqama_no, "Licence Expiry": licence_expiry,
+            "Q.R code": qr_code, "F.A Box": fa_box, "Fire Extinguisher T.P Expiry": fire_ext_tp_expiry,
+            "PWAS Status": pwas_status, "Seat belt damaged": seatbelt_damaged, "Tyre Condition": tyre_condition,
+            "Suspension Systems": suspension_systems, "Remarks": remarks
         }
         if st.form_submit_button("Submit"):
             try:
@@ -275,112 +263,147 @@ def show_heavy_vehicle_form(sheet):
             except Exception as e:
                 st.error(f"❌ Error: {e}")
 
+
 # -------------------- ADVANCED DASHBOARD --------------------
 def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_vehicle_sheet):
     st.header("📊 Dashboard")
-    tab_obs, tab_permit, tab_eqp, tab_veh = st.tabs(["📋 Observation", "🛠️ Permit", "🚜 Heavy Equipment", "🚚 Heavy Vehicle"])
+    tab_obs, tab_permit, tab_eqp, tab_veh = st.tabs([
+        "📋 Observation", "🛠️ Permit", "🚜 Heavy Equipment", "🚚 Heavy Vehicle"
+    ])
 
-    # ===================== HEAVY EQUIPMENT DASHBOARD =====================
     with tab_eqp:
-        st.subheader("🚜 Heavy Equipment Dashboard")
-        df = pd.DataFrame(heavy_equip_sheet.get_all_records())
-        if df.empty:
-            st.info("No Heavy Equipment data found.")
+        st.subheader("Heavy Equipment Analytics")
+        try:
+            df_equip = pd.DataFrame(heavy_equip_sheet.get_all_records())
+        except gspread.exceptions.GSpreadException as e:
+            st.error(f"Could not load data from Google Sheets: {e}")
             return
 
-        # Convert date columns to datetime
+        if df_equip.empty:
+            st.info("No Heavy Equipment data available to display.")
+            return
+
+        # --- Data Processing ---
         date_cols = ["T.P Expiry date", "Insurance expiry date", "T.P Card expiry date", "F.E TP expiry"]
         for col in date_cols:
-            if col in df.columns:
-                df[col] = pd.to_datetime(df[col], errors='coerce')
+            df_equip[col] = df_equip[col].apply(parse_date)
 
-        # Expiry Status Calculation
-        today = pd.Timestamp.today()
-        soon_threshold = today + pd.Timedelta(days=30)
+        today = date.today()
+        thirty_days = today + timedelta(days=30)
 
-        def get_expiry_status(date):
-            if pd.isnull(date):
-                return "Unknown"
-            elif date < today:
-                return "Expired"
-            elif date <= soon_threshold:
-                return "Expiring Soon"
-            else:
-                return "Valid"
+        # --- KPIs ---
+        total_equipment = len(df_equip)
+        expired_count = 0
+        expiring_soon_count = 0
 
         for col in date_cols:
-            df[f"{col} Status"] = df[col].apply(get_expiry_status)
+            expired_count += df_equip[df_equip[col] < today].shape[0]
+            expiring_soon_count += df_equip[(df_equip[col] >= today) & (df_equip[col] <= thirty_days)].shape[0]
 
-        # Summary Cards
-        total_eq = len(df)
-        expired = ((df["T.P Expiry date Status"] == "Expired") |
-                   (df["Insurance expiry date Status"] == "Expired") |
-                   (df["T.P Card expiry date Status"] == "Expired")).sum()
-        expiring_soon = ((df["T.P Expiry date Status"] == "Expiring Soon") |
-                         (df["Insurance expiry date Status"] == "Expiring Soon") |
-                         (df["T.P Card expiry date Status"] == "Expiring Soon")).sum()
+        kpi1, kpi2, kpi3 = st.columns(3)
+        kpi1.metric(label="Total Equipment", value=total_equipment)
+        kpi2.metric(label="Total Expired Items", value=expired_count, delta="Action Required", delta_color="inverse")
+        kpi3.metric(label="Expiring in 30 Days", value=expiring_soon_count, delta="Monitor Closely", delta_color="off")
 
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Total Equipments", total_eq)
-        c2.metric("⚠️ Expired", expired)
-        c3.metric("⏳ Expiring Soon", expiring_soon)
+        st.markdown("---")
 
-        st.divider()
+        # --- Expiry Alerts Section ---
+        st.subheader("🚨 Expiry Alerts")
+        expired_dfs = []
+        for col in date_cols:
+            expired_df = df_equip.loc[df_equip[col] <= thirty_days, ["Equipment type", "Plate No.", "Owner", col]].copy()
+            expired_df.rename(columns={col: "Expiry Date"}, inplace=True)
+            expired_df["Document Type"] = col.replace(" date", "").replace(" expiry", "")
+            expired_dfs.append(expired_df)
 
-        # Filters
-        col1, col2 = st.columns(2)
-        with col1:
-            owner_filter = st.multiselect("Filter by Owner", df["Owner"].unique())
-        with col2:
-            type_filter = st.multiselect("Filter by Equipment Type", df["Equipment type"].unique())
-
-        filtered_df = df.copy()
-        if owner_filter:
-            filtered_df = filtered_df[filtered_df["Owner"].isin(owner_filter)]
-        if type_filter:
-            filtered_df = filtered_df[filtered_df["Equipment type"].isin(type_filter)]
-
-        st.dataframe(filtered_df[
-            ["Equipment type", "Make", "Plate No.", "Owner", "T.P Expiry date",
-             "Insurance expiry date", "T.P Card expiry date", "PWAS status"]
-        ], use_container_width=True)
-
-        st.divider()
-
-        # Charts
-        col_a, col_b = st.columns(2)
-        with col_a:
-            status_counts = df["T.P Expiry date Status"].value_counts().reset_index()
-            status_counts.columns = ["Status", "Count"]
-            fig1 = px.pie(status_counts, names="Status", values="Count",
-                          title="T.P Expiry Date Status",
-                          color="Status",
-                          color_discrete_map={
-                              "Expired": "red",
-                              "Expiring Soon": "orange",
-                              "Valid": "green",
-                              "Unknown": "gray"
-                          })
-            st.plotly_chart(fig1, use_container_width=True)
-
-        with col_b:
-            type_counts = df["Equipment type"].value_counts().reset_index()
-            type_counts.columns = ["Equipment type", "Count"]
-            fig2 = px.bar(type_counts, x="Equipment type", y="Count", color="Equipment type",
-                          title="Equipment Count by Type")
-            st.plotly_chart(fig2, use_container_width=True)
-
-        st.divider()
-
-        # Expiry Alerts
-        st.subheader("🚨 Expiry Alerts (Next 30 Days or Expired)")
-        alert_df = df[
-            (df["T.P Expiry date Status"].isin(["Expired", "Expiring Soon"])) |
-            (df["Insurance expiry date Status"].isin(["Expired", "Expiring Soon"])) |
-            (df["T.P Card expiry date Status"].isin(["Expired", "Expiring Soon"]))
-        ][["Equipment type", "Plate No.", "Owner", "T.P Expiry date", "Insurance expiry date", "T.P Card expiry date"]]
-
+        alert_df = pd.concat(expired_dfs, ignore_index=True).sort_values(by="Expiry Date")
+        
         if alert_df.empty:
-            st.success("✅ All equipment documents are valid.")
+            st.success("✅ No equipment documents are expired or expiring within 30 days.")
         else:
-            st.dataframe
+            alert_df["Status"] = alert_df["Expiry Date"].apply(lambda d: "Expired" if d < today else "Expiring Soon")
+            st.dataframe(alert_df, use_container_width=True)
+
+        st.markdown("---")
+
+        # --- Visualizations ---
+        st.subheader("Visual Insights")
+        c1, c2 = st.columns(2)
+
+        with c1:
+            # Equipment Type Distribution
+            fig_type = px.bar(
+                df_equip['Equipment type'].value_counts().reset_index(),
+                x='Equipment type', y='count', title='Equipment Distribution by Type',
+                labels={'count': 'Number of Units', 'Equipment type': 'Type'}
+            )
+            fig_type.update_layout(xaxis_tickangle=-45)
+            st.plotly_chart(fig_type, use_container_width=True)
+
+        with c2:
+            # PWAS Status
+            fig_pwas = px.pie(
+                df_equip, names='PWAS status', title='PWAS Status Overview',
+                hole=0.3
+            )
+            st.plotly_chart(fig_pwas, use_container_width=True)
+            
+        # Equipment by Owner
+        fig_owner = px.bar(
+            df_equip['Owner'].value_counts().nlargest(10).reset_index(),
+            x='Owner', y='count', title='Top 10 Equipment Owners',
+            labels={'count': 'Number of Units', 'Owner': 'Owner Name'}
+        )
+        st.plotly_chart(fig_owner, use_container_width=True)
+        
+        st.markdown("---")
+        
+        # --- Full Data View ---
+        st.subheader("Full Heavy Equipment Data")
+        # Create a copy for display to not affect the original dataframe
+        df_display = df_equip.copy()
+        for col in date_cols:
+             df_display[col] = df_display[col].apply(badge_expiry)
+        
+        st.dataframe(df_display, use_container_width=True)
+
+
+# -------------------- MAIN APP --------------------
+def main():
+    st.set_page_config(page_title="Onsite Reporting System", layout="wide")
+    if "logged_in" not in st.session_state or not st.session_state.get("logged_in"):
+        login()
+        return
+
+    obs_sheet, permit_sheet, heavy_equip_sheet, heavy_vehicle_sheet = get_sheets()
+    choice = sidebar()
+
+    if choice == "🏠 Home":
+        st.title("📋 Onsite Reporting System")
+        st.write(f"Welcome, **{st.session_state.get('username')}**!")
+        st.info("Select an option from the sidebar to begin.")
+
+    elif choice == "📝 Observation Form":
+        show_observation_form(obs_sheet)
+
+    elif choice == "🛠️ Permit Form":
+        show_permit_form(permit_sheet)
+
+    elif choice == "📊 Dashboard":
+        if st.session_state.get("role") == "admin":
+            show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_vehicle_sheet)
+        else:
+            st.warning("🚫 Access Denied: This page is for admins only.")
+
+    elif choice == "🚜 Heavy Equipment":
+        show_equipment_form(heavy_equip_sheet)
+
+    elif choice == "🚚 Heavy Vehicle":
+        show_heavy_vehicle_form(heavy_vehicle_sheet)
+
+    elif choice == "🚪 Logout":
+        st.session_state.clear()
+        st.rerun()
+
+if __name__ == "__main__":
+    main()
