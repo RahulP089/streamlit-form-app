@@ -361,13 +361,14 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         kpi3.metric(label="Most Common Type", value=most_common_type)
         st.markdown("---")
 
+        st.subheader("Permit Distribution")
         col1, col2 = st.columns(2)
         with col1:
             if 'TYPE OF PERMIT' in df_permit.columns:
                 fig_type = px.bar(
                     df_permit['TYPE OF PERMIT'].value_counts().reset_index(),
-                    x='TYPE OF PERMIT', y='count', title='Distribution of Permit Types',
-                    labels={'count': 'Number of Permits', 'TYPE OF PERMIT': 'Permit Type'},
+                    x='TYPE OF PERMIT', y='count', title='Permits by Type',
+                    labels={'count': 'Count', 'TYPE OF PERMIT': 'Permit Type'},
                     text_auto=True
                 )
                 st.plotly_chart(fig_type, use_container_width=True)
@@ -376,26 +377,38 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             if 'PERMIT ISSUER' in df_permit.columns:
                 fig_issuer = px.bar(
                     df_permit['PERMIT ISSUER'].value_counts().reset_index(),
-                    x='PERMIT ISSUER', y='count', title='Permits Handled by Issuer',
-                    labels={'count': 'Number of Permits', 'PERMIT ISSUER': 'Issuer Name'},
+                    x='PERMIT ISSUER', y='count', title='Permits by Issuer',
+                    labels={'count': 'Count', 'PERMIT ISSUER': 'Issuer Name'},
                     text_auto=True
                 )
                 st.plotly_chart(fig_issuer, use_container_width=True)
         
-        # --- MODIFIED SECTION: REPLACED TREND WITH RECEIVER CHART ---
-        if 'PERMIT RECEIVER' in df_permit.columns:
-            st.subheader("Permits Handled by Receiver")
-            receiver_counts = df_permit['PERMIT RECEIVER'].value_counts().nlargest(15).reset_index()
-            fig_receiver = px.bar(
-                receiver_counts,
-                x='PERMIT RECEIVER', y='count', title='Top 15 Permit Receivers',
-                labels={'count': 'Number of Permits', 'PERMIT RECEIVER': 'Receiver Name'},
-                text_auto=True
-            )
-            fig_receiver.update_layout(xaxis_tickangle=-45)
-            st.plotly_chart(fig_receiver, use_container_width=True)
-        # -----------------------------------------------------------
+        # --- NEW 2x2 GRID FOR CHARTS ---
+        col3, col4 = st.columns(2)
+        with col3:
+            if 'PERMIT RECEIVER' in df_permit.columns:
+                receiver_counts = df_permit['PERMIT RECEIVER'].value_counts().nlargest(10).reset_index()
+                fig_receiver = px.bar(
+                    receiver_counts,
+                    x='PERMIT RECEIVER', y='count', title='Top 10 Permit Receivers',
+                    labels={'count': 'Count', 'PERMIT RECEIVER': 'Receiver Name'},
+                    text_auto=True
+                )
+                fig_receiver.update_layout(xaxis_tickangle=-45)
+                st.plotly_chart(fig_receiver, use_container_width=True)
         
+        with col4:
+            if 'DRILL SITE' in df_permit.columns:
+                site_counts = df_permit['DRILL SITE'].value_counts().reset_index()
+                fig_site = px.bar(
+                    site_counts,
+                    x='DRILL SITE', y='count', title='Permits by Drill Site',
+                    labels={'count': 'Count', 'DRILL SITE': 'Drill Site'},
+                    text_auto=True
+                )
+                st.plotly_chart(fig_site, use_container_width=True)
+        # ------------------------------------
+
         st.markdown("---")
         st.subheader("Full Permit Log Data")
         df_display_permit = df_permit.copy()
