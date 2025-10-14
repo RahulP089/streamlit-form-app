@@ -328,12 +328,10 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         "📋 Observation", "🛠️ Permit", "🚜 Heavy Equipment", "🚚 Heavy Vehicle"
     ])
 
-    # --- NEW PERMIT DASHBOARD ---
     with tab_permit:
         st.subheader("Permit Log Analytics")
         try:
             df_permit = pd.DataFrame(permit_sheet.get_all_records())
-            # Ensure header names are consistent
             df_permit.columns = [col.upper() for col in df_permit.columns]
         except gspread.exceptions.GSpreadException as e:
             st.error(f"Could not load permit data from Google Sheets: {e}")
@@ -343,7 +341,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             st.info("No permit data available to display.")
             return
 
-        # Data Processing
         if 'DATE' in df_permit.columns:
             df_permit['DATE'] = pd.to_datetime(df_permit['DATE'], errors='coerce')
             df_permit.dropna(subset=['DATE'], inplace=True)
@@ -351,7 +348,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             st.warning("The 'DATE' column is missing from the Permit Log sheet.")
             return
 
-        # KPIs
         total_permits = len(df_permit)
         today_date = pd.to_datetime(date.today())
         permits_today = df_permit[df_permit['DATE'].dt.date == today_date.date()].shape[0]
@@ -365,7 +361,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         kpi3.metric(label="Most Common Type", value=most_common_type)
         st.markdown("---")
 
-        # Visualizations
         col1, col2 = st.columns(2)
         with col1:
             if 'TYPE OF PERMIT' in df_permit.columns:
@@ -391,18 +386,21 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         df_permit_last_30 = df_permit[df_permit['DATE'] >= (today_date - timedelta(days=30))]
         if not df_permit_last_30.empty:
             permits_by_day = df_permit_last_30.groupby(df_permit_last_30['DATE'].dt.date).size().reset_index(name='count')
-            fig_trend = px.line(
+            
+            # --- MODIFIED CHART ---
+            fig_trend = px.bar(
                 permits_by_day,
                 x='DATE', y='count', title='Daily Permit Volume',
                 labels={'count': 'Number of Permits Issued', 'DATE': 'Date'},
-                markers=True
+                text_auto=True
             )
+            # ----------------------
+            
             fig_trend.update_layout(xaxis_title="Date", yaxis_title="Number of Permits")
             st.plotly_chart(fig_trend, use_container_width=True)
         else:
             st.info("No permit data in the last 30 days to show a trend.")
 
-        # Full Data View
         st.markdown("---")
         st.subheader("Full Permit Log Data")
         df_display_permit = df_permit.copy()
@@ -421,7 +419,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             st.info("No Heavy Equipment data available to display.")
             return
 
-        # Data Processing
         date_cols = ["T.P Expiry date", "Insurance expiry date", "T.P Card expiry date", "F.E TP expiry"]
         for col in date_cols:
              if col in df_equip.columns:
@@ -430,7 +427,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         today = date.today()
         ten_days = today + timedelta(days=10)
 
-        # T.P Card Specific Expiry Alert
         st.subheader("🚨 T.P Card Expiry Alerts")
         tp_card_col = "T.P Card expiry date"
         tp_required_cols = ["Equipment type", "Palte No.", "Owner", tp_card_col]
@@ -450,7 +446,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         
         st.markdown("---")
 
-        # KPIs
         total_equipment = len(df_equip)
         expired_count = 0
         expiring_soon_count = 0
@@ -467,7 +462,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
 
         st.markdown("---")
         
-        # Visualizations
         st.subheader("Visual Insights")
         c1_eq, c2_eq = st.columns(2)
 
@@ -501,7 +495,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         
         st.markdown("---")
         
-        # Full Data View
         st.subheader("Full Heavy Equipment Data")
         df_display_eq = df_equip.copy()
         for col in date_cols:
