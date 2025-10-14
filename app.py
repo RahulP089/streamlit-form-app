@@ -16,6 +16,7 @@ OBSERVATION_URL = "https://docs.google.com/spreadsheets/d/1i3f5ixYfRjfHeHXbuV0Gp
 PERMIT_URL = "https://docs.google.com/spreadsheets/d/1Xam9P0t-BZq6OcLDSYizLhpvbpj2spWgT2fncHpHjcU/edit"
 EQUIPMENT_URL = "https://docs.google.com/spreadsheets/d/1KbjDWkdG4Ce9fSDs3tCZskyoSGgIpSzFb5I7rMOAS3w/edit"
 
+# --- Tab Names for Equipment Workbook ---
 HEAVY_EQUIP_TAB = "Heavy Equipment"
 HEAVY_VEHICLE_TAB = "Heavy Vehicles"
 
@@ -25,10 +26,8 @@ def parse_date(s):
     if isinstance(s, (date, datetime)):
         return s.date() if isinstance(s, datetime) else s
     try:
-        # UPDATED: Changed format to parse 'Day Month Year'
         return datetime.strptime(str(s).split(' ')[0], "%d %B %Y").date()
     except (ValueError, TypeError):
-        # Add a fallback for the old format to avoid breaking existing data
         try:
             return datetime.strptime(str(s).split(' ')[0], "%Y-%m-%d").date()
         except (ValueError, TypeError):
@@ -39,7 +38,6 @@ def badge_expiry(d, expiry_days=10):
     if d is None:
         return "⚪ Not Set"
     today = date.today()
-    # UPDATED: Changed date format in display strings
     date_str = d.strftime('%d %B %Y')
     if d < today:
         return f"🚨 Expired ({date_str})"
@@ -58,26 +56,31 @@ def get_sheets():
     )
     client = gspread.authorize(creds)
 
-    obs_sheet = client.open_by_url(OBSERVATION_URL).sheet1
-    permit_sheet = client.open_by_url(PERMIT_URL).sheet1
-    wb = client.open_by_url(EQUIPMENT_URL)
-
-    def get_or_create(ws_title, headers=None):
+    # --- Helper function to get or create a worksheet ---
+    def get_or_create(workbook, ws_title, headers=None):
         try:
-            ws = wb.worksheet(ws_title)
+            ws = workbook.worksheet(ws_title)
         except gspread.exceptions.WorksheetNotFound:
-            ws = wb.add_worksheet(title=ws_title, rows="1000", cols="40")
+            ws = workbook.add_worksheet(title=ws_title, rows="1000", cols="40")
             if headers:
                 ws.append_row(headers)
         return ws
     
+    # --- Define Headers for ALL sheets to prevent KeyErrors ---
+    obs_headers = [
+        "DATE", "WELL NO", "AREA", "OBSERVER NAME", "OBSERVATION DETAILS",
+        "RECOMMENDED SOLUTION/ACTION TAKEN", "SUPERVISOR NAME", "DISCIPLINE",
+        "CATEGORY", "CLASSIFICATION", "STATUS"
+    ]
+    permit_headers = [
+        "DATE", "PERMIT NO", "TYPE OF PERMIT", "ACTIVITY", "PERMIT RECEIVER", "PERMIT ISSUER"
+    ]
     heavy_equip_headers = [
         "Equipment type", "Make", "Palte No.", "Asset code", "Owner", "T.P inspection date", "T.P Expiry date",
         "Insurance expiry date", "Operator Name", "Iqama NO", "T.P Card type", "T.P Card Number",
         "T.P Card expiry date", "Q.R code", "PWAS status", "F.E TP expiry",
         "FA box Status", "Documents"
     ]
-
     heavy_vehicle_headers = [
         "Vehicle Type", "Make", "Plate No", "Asset Code", "Owner", "MVPI Expiry date", "Insurance Expiry",
         "Driver Name", "Iqama No", "Licence Expiry", "Q.R code", "F.A Box",
@@ -85,8 +88,16 @@ def get_sheets():
         "Suspension Systems", "Remarks"
     ]
 
-    heavy_equip_sheet = get_or_create(HEAVY_EQUIP_TAB, headers=heavy_equip_headers)
-    heavy_vehicle_sheet = get_or_create(HEAVY_VEHICLE_TAB, headers=heavy_vehicle_headers)
+    # --- Open workbooks ---
+    obs_wb = client.open_by_url(OBSERVATION_URL)
+    permit_wb = client.open_by_url(PERMIT_URL)
+    equip_wb = client.open_by_url(EQUIPMENT_URL)
+
+    # --- Get or create all worksheets securely ---
+    obs_sheet = get_or_create(obs_wb, "Sheet1", headers=obs_headers)
+    permit_sheet = get_or_create(permit_wb, "Sheet1", headers=permit_headers)
+    heavy_equip_sheet = get_or_create(equip_wb, HEAVY_EQUIP_TAB, headers=heavy_equip_headers)
+    heavy_vehicle_sheet = get_or_create(equip_wb, HEAVY_VEHICLE_TAB, headers=heavy_vehicle_headers)
 
     return obs_sheet, permit_sheet, heavy_equip_sheet, heavy_vehicle_sheet
 
@@ -163,364 +174,4 @@ def show_equipment_form(sheet):
 
         st.subheader("T.P Card & Status")
         cols_status = st.columns(2)
-        tp_card_type = cols_status[0].selectbox("T.P Card Type", ["SPSP", "Aramco", "PAX", "N/A"])
-        tp_card_number = cols_status[1].text_input("T.P Card Number")
-        pwas_status = cols_status[0].selectbox("PWAS Status", ["Working", "Not Working", "Alarm Not Audible", "Faulty Camera/Monitor", "N/A"])
-        fa_box_status = cols_status[1].text_input("FA box Status")
-        qr_code = cols_status[0].text_input("Q.R code")
-        documents = cols_status[1].text_input("Documents")
-
-        if st.form_submit_button("Submit", use_container_width=True):
-            data = [
-                equipment_type, make, plate_no, asset_code, owner, tp_insp_date, tp_expiry,
-                insurance_expiry, operator_name, iqama_no, tp_card_type, tp_card_number,
-                tp_card_expiry, qr_code, pwas_status, fe_tp_expiry, fa_box_status, documents
-            ]
-            try:
-                sheet.append_row(data)
-                st.success("✅ Equipment submitted successfully!")
-            except Exception as e:
-                st.error(f"❌ Error submitting data: {e}")
-
-def show_observation_form(sheet):
-    st.header("📋 Daily HSE Site Observation Entry Form")
-    well_numbers = ["2334", "2556", "1858", "2433", "2553", "2447"]
-    with st.form("obs_form", clear_on_submit=True):
-        form_date = st.date_input("Date")
-        data = {
-            "DATE": form_date.strftime("%d %B %Y"),
-            "WELL NO": st.selectbox("Well No", well_numbers),
-            "AREA": st.text_input("Area"),
-            "OBSERVER NAME": st.text_input("Observer Name"),
-            "OBSERVATION DETAILS": st.text_area("Observation Details"),
-            "RECOMMENDED SOLUTION/ACTION TAKEN": st.text_area("Recommended Action"),
-            "SUPERVISOR NAME": st.text_input("Supervisor Name"),
-            "DISCIPLINE": st.text_input("Discipline"),
-            "CATEGORY": st.text_input("Category"),
-            "CLASSIFICATION": st.selectbox("Classification", ["POSITIVE", "UNSAFE CONDITION", "UNSAFE ACT"]),
-            "STATUS": st.selectbox("Status", ["Open", "Closed"])
-        }
-        if st.form_submit_button("Submit"):
-            try:
-                sheet.append_row(list(data.values()))
-                st.success("✅ Observation submitted successfully!")
-            except Exception as e:
-                st.error(f"❌ Error submitting data: {e}")
-
-def show_permit_form(sheet):
-    st.header("🛠️ Daily Internal Permit Log")
-    with st.form("permit_form", clear_on_submit=True):
-        data = {
-            "DATE": st.date_input("Date").strftime("%d %B %Y"),
-            "PERMIT NO": st.text_input("Permit No"),
-            "TYPE OF PERMIT": st.text_input("Type of Permit"),
-            "ACTIVITY": st.text_area("Activity"),
-            "PERMIT RECEIVER": st.text_input("Permit Receiver"),
-            "PERMIT ISSUER": st.text_input("Permit Issuer"),
-        }
-        if st.form_submit_button("Submit"):
-            try:
-                sheet.append_row(list(data.values()))
-                st.success("✅ Permit submitted successfully!")
-            except Exception as e:
-                st.error(f"❌ Error submitting data: {e}")
-
-def show_heavy_vehicle_form(sheet):
-    st.header("🚚 Heavy Vehicle Entry Form")
-    VEHICLE_LIST = ["Bus", "Dump Truck", "Low Bed", "Trailer", "Water Tanker", "Mini Bus", "Flat Truck"]
-    with st.form("vehicle_form", clear_on_submit=True):
-        vehicle_type = st.selectbox("Vehicle Type", VEHICLE_LIST)
-        make = st.text_input("Make")
-        plate_no = st.text_input("Plate No")
-        asset_code = st.text_input("Asset Code")
-        owner = st.text_input("Owner")
-        mvpi_expiry = st.date_input("MVPI Expiry date").strftime("%d %B %Y")
-        insurance_expiry = st.date_input("Insurance Expiry").strftime("%d %B %Y")
-        driver_name = st.text_input("Driver Name")
-        iqama_no = st.text_input("Iqama No")
-        licence_expiry = st.date_input("Licence Expiry").strftime("%d %B %Y")
-        qr_code = st.text_input("Q.R code")
-        fa_box = st.selectbox("F.A Box", ["Available", "Not Available", "Expired", "Inadequate Medicine"])
-        fire_ext_tp_expiry = st.date_input("Fire Extinguisher T.P Expiry").strftime("%d %B %Y")
-        pwas_status = st.selectbox("PWAS Status", ["Working", "Not Working", "Alarm Not Audible", "Faulty Camera/Monitor", "N/A"])
-        seatbelt_damaged = st.selectbox("Seat belt damaged", ["Yes", "No", "N/A"])
-        tyre_condition = st.selectbox("Tyre Condition", ["Good", "Worn Out", "Damaged", "Needs Replacement", "N/A"])
-        suspension_systems = st.selectbox("Suspension Systems", ["Good", "Faulty", "Needs Repair", "Damaged", "N/A"])
-        remarks = st.text_input("Remarks")
-
-        data = {
-            "Vehicle Type": vehicle_type, "Make": make, "Plate No": plate_no, "Asset Code": asset_code,
-            "Owner": owner, "MVPI Expiry date": mvpi_expiry, "Insurance Expiry": insurance_expiry,
-            "Driver Name": driver_name, "Iqama No": iqama_no, "Licence Expiry": licence_expiry,
-            "Q.R code": qr_code, "F.A Box": fa_box, "Fire Extinguisher T.P Expiry": fire_ext_tp_expiry,
-            "PWAS Status": pwas_status, "Seat belt damaged": seatbelt_damaged, "Tyre Condition": tyre_condition,
-            "Suspension Systems": suspension_systems, "Remarks": remarks
-        }
-        if st.form_submit_button("Submit"):
-            try:
-                sheet.append_row(list(data.values()))
-                st.success("✅ Heavy Vehicle submitted successfully!")
-            except Exception as e:
-                st.error(f"❌ Error: {e}")
-
-# -------------------- ADVANCED DASHBOARD (UPDATED) --------------------
-def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_vehicle_sheet):
-    st.header("📊 Dashboard")
-    tab_obs, tab_permit, tab_eqp, tab_veh = st.tabs([
-        "📋 Observation", "🛠️ Permit", "🚜 Heavy Equipment", "🚚 Heavy Vehicle"
-    ])
-    
-    # --- NEW: PERMIT DASHBOARD TAB ---
-    with tab_permit:
-        st.subheader("Permit Log Analytics")
-        try:
-            df_permit = pd.DataFrame(permit_sheet.get_all_records())
-        except gspread.exceptions.GSpreadException as e:
-            st.error(f"Could not load permit data from Google Sheets: {e}")
-            return # Use return to stop execution if data fails to load
-
-        if df_permit.empty:
-            st.info("No permit data available to display.")
-        else:
-            # --- Data Processing ---
-            df_permit['DATE'] = df_permit['DATE'].apply(parse_date)
-            df_permit.dropna(subset=['DATE'], inplace=True) # Remove rows where date could not be parsed
-            df_permit['DATE'] = pd.to_datetime(df_permit['DATE'])
-
-            # --- KPIs ---
-            st.markdown("##### Key Metrics")
-            total_permits = len(df_permit)
-            permits_today = df_permit[df_permit['DATE'].dt.date == date.today()].shape[0]
-            # Ensure 'TYPE OF PERMIT' column exists and is not empty before using .mode()
-            if 'TYPE OF PERMIT' in df_permit.columns and not df_permit['TYPE OF PERMIT'].empty:
-                 common_permit_type = df_permit['TYPE OF PERMIT'].mode()[0]
-            else:
-                 common_permit_type = "N/A"
-
-            kpi1, kpi2, kpi3 = st.columns(3)
-            kpi1.metric(label="Total Permits Issued", value=total_permits)
-            kpi2.metric(label="Permits Issued Today", value=permits_today)
-            kpi3.metric(label="Most Common Permit", value=common_permit_type)
-
-            st.markdown("---")
-
-            # --- Visualizations ---
-            st.markdown("##### Visual Insights")
-            
-            # Chart 1: Permits Issued Over Time
-            permits_by_day = df_permit.groupby(df_permit['DATE'].dt.date).size().reset_index(name='count')
-            fig_daily = px.bar(
-                permits_by_day,
-                x='DATE', y='count',
-                title='Permits Issued Per Day',
-                labels={'count': 'Number of Permits', 'DATE': 'Date'},
-                text_auto=True
-            )
-            st.plotly_chart(fig_daily, use_container_width=True)
-
-            c1, c2 = st.columns(2)
-            # Chart 2: Permit Type Distribution
-            with c1:
-                 if 'TYPE OF PERMIT' in df_permit.columns:
-                     fig_type = px.pie(
-                         df_permit, names='TYPE OF PERMIT', title='Distribution of Permit Types',
-                         hole=0.3
-                     )
-                     st.plotly_chart(fig_type, use_container_width=True)
-            
-            # Chart 3: Top Permit Issuers
-            with c2:
-                if 'PERMIT ISSUER' in df_permit.columns:
-                    issuer_counts = df_permit['PERMIT ISSUER'].value_counts().nlargest(10).reset_index()
-                    fig_issuer = px.bar(
-                        issuer_counts,
-                        x='count', y='PERMIT ISSUER',
-                        orientation='h',
-                        title='Top 10 Permit Issuers',
-                        labels={'count': 'Number of Permits', 'PERMIT ISSUER': 'Issuer Name'},
-                        text_auto=True
-                    )
-                    fig_issuer.update_layout(yaxis={'categoryorder':'total ascending'})
-                    st.plotly_chart(fig_issuer, use_container_width=True)
-
-            st.markdown("---")
-            
-            # --- Full Data View ---
-            st.markdown("##### Full Permit Log")
-            st.dataframe(df_permit, use_container_width=True)
-
-    with tab_eqp:
-        st.subheader("Heavy Equipment Analytics")
-        try:
-            df_equip = pd.DataFrame(heavy_equip_sheet.get_all_records())
-        except gspread.exceptions.GSpreadException as e:
-            st.error(f"Could not load data from Google Sheets: {e}")
-            return
-
-        if df_equip.empty:
-            st.info("No Heavy Equipment data available to display.")
-            return
-
-        # --- Data Processing ---
-        date_cols = ["T.P Expiry date", "Insurance expiry date", "T.P Card expiry date", "F.E TP expiry"]
-        for col in date_cols:
-             if col in df_equip.columns:
-                 df_equip[col] = df_equip[col].apply(parse_date)
-
-        today = date.today()
-        ten_days = today + timedelta(days=10)
-
-        # --- T.P Card Specific Expiry Alert ---
-        st.subheader("🚨 T.P Card Expiry Alerts")
-        tp_card_col = "T.P Card expiry date"
-        tp_required_cols = ["Equipment type", "Palte No.", "Owner", tp_card_col]
-
-        if all(col in df_equip.columns for col in tp_required_cols):
-            tp_alert_df = df_equip.loc[df_equip[tp_card_col] <= ten_days, tp_required_cols].copy()
-
-            if tp_alert_df.empty:
-                st.success("✅ No T.P cards are expired or expiring within 10 days.")
-            else:
-                tp_alert_df["Status"] = tp_alert_df[tp_card_col].apply(
-                    lambda d: "Expired" if d < today else "Expiring Soon"
-                )
-                st.dataframe(tp_alert_df, use_container_width=True)
-        else:
-            st.warning("Could not generate T.P Card alerts. One or more required columns are missing from the sheet: 'Equipment type', 'Palte No.', 'Owner', 'T.P Card expiry date'.")
-        
-        st.markdown("---")
-
-
-        # --- KPIs ---
-        total_equipment = len(df_equip)
-        expired_count = 0
-        expiring_soon_count = 0
-
-        for col in date_cols:
-             if col in df_equip.columns:
-                # Ensure the column contains valid date objects before comparing
-                valid_dates = pd.to_datetime(df_equip[col], errors='coerce').dt.date
-                expired_count += (valid_dates < today).sum()
-                expiring_soon_count += ((valid_dates >= today) & (valid_dates <= ten_days)).sum()
-
-
-        kpi1, kpi2, kpi3 = st.columns(3)
-        kpi1.metric(label="Total Equipment", value=total_equipment)
-        kpi2.metric(label="Total Expired Items", value=expired_count, delta="Action Required", delta_color="inverse")
-        kpi3.metric(label="Expiring in 10 Days", value=expiring_soon_count, delta="Monitor Closely", delta_color="off")
-
-        st.markdown("---")
-
-        # --- General Expiry Alerts Section (All Documents) ---
-        st.subheader("🔍 All Document Expiry Alerts")
-        expired_dfs = []
-        for col in date_cols:
-            if col in df_equip.columns:
-                required_cols = ["Equipment type", "Palte No.", "Owner", col]
-                
-                if all(c in df_equip.columns for c in required_cols):
-                    # Filter rows where the date is not NaT (Not a Time)
-                    valid_dates_mask = pd.notna(df_equip[col])
-                    temp_df = df_equip[valid_dates_mask]
-                    
-                    expired_df = temp_df.loc[temp_df[col] <= ten_days, required_cols].copy()
-                    expired_df.rename(columns={col: "Expiry Date"}, inplace=True)
-                    expired_df["Document Type"] = col.replace(" date", "").replace(" expiry", "")
-                    expired_dfs.append(expired_df)
-
-        if not expired_dfs:
-             st.success("✅ No equipment documents are expired or expiring within 10 days.")
-        else:
-            alert_df = pd.concat(expired_dfs, ignore_index=True).sort_values(by="Expiry Date")
-            if alert_df.empty:
-                st.success("✅ No equipment documents are expired or expiring within 10 days.")
-            else:
-                alert_df["Status"] = alert_df["Expiry Date"].apply(lambda d: "Expired" if d < today else "Expiring Soon")
-                st.dataframe(alert_df, use_container_width=True)
-
-
-        st.markdown("---")
-
-        # --- Visualizations ---
-        st.subheader("Visual Insights")
-        c1, c2 = st.columns(2)
-
-        with c1:
-            if 'Equipment type' in df_equip.columns:
-                fig_type = px.bar(
-                    df_equip['Equipment type'].value_counts().reset_index(),
-                    x='Equipment type', y='count', title='Equipment Distribution by Type',
-                    labels={'count': 'Number of Units', 'Equipment type': 'Type'},
-                    text_auto=True 
-                )
-                fig_type.update_layout(xaxis_tickangle=-45)
-                st.plotly_chart(fig_type, use_container_width=True)
-
-        with c2:
-            if 'PWAS status' in df_equip.columns:
-                fig_pwas = px.pie(
-                    df_equip, names='PWAS status', title='PWAS Status Overview',
-                    hole=0.3
-                )
-                st.plotly_chart(fig_pwas, use_container_width=True)
-            
-        if 'Owner' in df_equip.columns:
-            fig_owner = px.bar(
-                df_equip['Owner'].value_counts().nlargest(10).reset_index(),
-                x='Owner', y='count', title='Top 10 Equipment Owners',
-                labels={'count': 'Number of Units', 'Owner': 'Owner Name'},
-                text_auto=True
-            )
-            st.plotly_chart(fig_owner, use_container_width=True)
-        
-        st.markdown("---")
-        
-        # --- Full Data View ---
-        st.subheader("Full Heavy Equipment Data")
-        df_display = df_equip.copy()
-        for col in date_cols:
-             if col in df_display.columns:
-                 df_display[col] = df_display[col].apply(badge_expiry, expiry_days=10)
-        
-        st.dataframe(df_display, use_container_width=True)
-
-
-# -------------------- MAIN APP --------------------
-def main():
-    st.set_page_config(page_title="Onsite Reporting System", layout="wide")
-    if "logged_in" not in st.session_state or not st.session_state.get("logged_in"):
-        login()
-        return
-
-    obs_sheet, permit_sheet, heavy_equip_sheet, heavy_vehicle_sheet = get_sheets()
-    choice = sidebar()
-
-    if choice == "🏠 Home":
-        st.title("📋 Onsite Reporting System")
-        st.write(f"Welcome, **{st.session_state.get('username')}**!")
-        st.info("Select an option from the sidebar to begin.")
-
-    elif choice == "📝 Observation Form":
-        show_observation_form(obs_sheet)
-
-    elif choice == "🛠️ Permit Form":
-        show_permit_form(permit_sheet)
-
-    elif choice == "📊 Dashboard":
-        if st.session_state.get("role") == "admin":
-            show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_vehicle_sheet)
-        else:
-            st.warning("🚫 Access Denied: This page is for admins only.")
-
-    elif choice == "🚜 Heavy Equipment":
-        show_equipment_form(heavy_equip_sheet)
-
-    elif choice == "🚚 Heavy Vehicle":
-        show_heavy_vehicle_form(heavy_vehicle_sheet)
-
-    elif choice == "🚪 Logout":
-        st.session_state.clear()
-        st.rerun()
-
-if __name__ == "__main__":
-    main()
+        tp_card_type = cols_status[0].selectbox("T.P Card Type", ["S
