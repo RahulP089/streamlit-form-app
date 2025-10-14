@@ -64,7 +64,6 @@ def get_sheets():
                 ws.append_row(headers)
         return ws
     
-    # CORRECTED: Headers now match your sheet exactly, including "Palte No."
     heavy_equip_headers = [
         "Equipment type", "Make", "Palte No.", "Asset code", "Owner", "T.P inspection date", "T.P Expiry date",
         "Insurance expiry date", "Operator Name", "Iqama NO", "T.P Card type", "T.P Card Number",
@@ -141,7 +140,6 @@ def show_equipment_form(sheet):
         cols = st.columns(2)
         equipment_type = cols[0].selectbox("Equipment type", EQUIPMENT_LIST)
         make = cols[1].text_input("Make")
-        # CORRECTED: Form label matches the header
         plate_no = cols[0].text_input("Palte No.")
         asset_code = cols[1].text_input("Asset code")
         owner = cols[0].text_input("Owner")
@@ -205,7 +203,8 @@ def show_observation_form(sheet):
 def show_permit_form(sheet):
     st.header("🛠️ Daily Internal Permit Log")
     
-    # List of names for the dropdown
+    # Lists for dropdowns
+    DRILL_SITES = ["2485", "2566", "2534", "1969", "2549", "1972"]
     PERMIT_RECEIVERS = [
         "MD MEHEDI HASAN NAHID", "JEFFREY VERBO YOSORES", "RAMESH KOTHAPALLY BHUMAIAH",
         "ALAA ALI ALI ALQURAISHI", "VALDIMIR FERNANDO", "PRINCE BRANDON LEE RAJU",
@@ -228,7 +227,9 @@ def show_permit_form(sheet):
         data = {
             "AREA": st.text_input("Area"),
             "DATE": st.date_input("Date").strftime("%Y-%m-%d"),
-            "DRILL SITE": st.text_input("Drill Site"),
+            # --- MODIFIED LINE ---
+            "DRILL SITE": st.selectbox("Drill Site", DRILL_SITES),
+            # ---------------------
             "PERMIT NO": st.text_input("Permit No"),
             "TYPE OF PERMIT": st.text_input("Type of Permit"),
             "ACTIVITY": st.text_area("Activity"),
@@ -311,7 +312,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         # --- T.P Card Specific Expiry Alert ---
         st.subheader("🚨 T.P Card Expiry Alerts")
         tp_card_col = "T.P Card expiry date"
-        # CORRECTED: Changed "Plate No" to "Palte No." to match your sheet
         tp_required_cols = ["Equipment type", "Palte No.", "Owner", tp_card_col]
 
         if all(col in df_equip.columns for col in tp_required_cols):
@@ -351,7 +351,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         expired_dfs = []
         for col in date_cols:
             if col in df_equip.columns:
-                # CORRECTED: Changed "Plate No" to "Palte No." to match your sheet
                 required_cols = ["Equipment type", "Palte No.", "Owner", col]
                 
                 if all(c in df_equip.columns for c in required_cols):
