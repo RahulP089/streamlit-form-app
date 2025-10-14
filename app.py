@@ -382,25 +382,21 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 )
                 st.plotly_chart(fig_issuer, use_container_width=True)
         
-        st.subheader("Permit Issuance Trend (Last 30 Days)")
-        df_permit_last_30 = df_permit[df_permit['DATE'] >= (today_date - timedelta(days=30))]
-        if not df_permit_last_30.empty:
-            permits_by_day = df_permit_last_30.groupby(df_permit_last_30['DATE'].dt.date).size().reset_index(name='count')
-            
-            # --- MODIFIED CHART ---
-            fig_trend = px.bar(
-                permits_by_day,
-                x='DATE', y='count', title='Daily Permit Volume',
-                labels={'count': 'Number of Permits Issued', 'DATE': 'Date'},
+        # --- NEW CHART FOR PERMIT RECEIVER ---
+        if 'PERMIT RECEIVER' in df_permit.columns:
+            st.subheader("Permits Handled by Receiver")
+            # Using nlargest(15) to keep the chart clean if there are many receivers
+            receiver_counts = df_permit['PERMIT RECEIVER'].value_counts().nlargest(15).reset_index()
+            fig_receiver = px.bar(
+                receiver_counts,
+                x='PERMIT RECEIVER', y='count', title='Top 15 Permit Receivers',
+                labels={'count': 'Number of Permits', 'PERMIT RECEIVER': 'Receiver Name'},
                 text_auto=True
             )
-            # ----------------------
-            
-            fig_trend.update_layout(xaxis_title="Date", yaxis_title="Number of Permits")
-            st.plotly_chart(fig_trend, use_container_width=True)
-        else:
-            st.info("No permit data in the last 30 days to show a trend.")
-
+            fig_receiver.update_layout(xaxis_tickangle=-45) # Angle names for readability
+            st.plotly_chart(fig_receiver, use_container_width=True)
+        # ----------------------------------------
+        
         st.markdown("---")
         st.subheader("Full Permit Log Data")
         df_display_permit = df_permit.copy()
