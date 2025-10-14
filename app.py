@@ -180,7 +180,6 @@ def show_observation_form(sheet):
     well_numbers = ["2334", "2556", "1858", "2433", "2553", "2447"]
     with st.form("obs_form", clear_on_submit=True):
         
-        # --- NEW TWO-COLUMN LAYOUT ---
         col1, col2 = st.columns(2)
 
         with col1:
@@ -198,10 +197,8 @@ def show_observation_form(sheet):
         
         obs_details = st.text_area("Observation Details")
         rec_action = st.text_area("Recommended Action")
-        # -----------------------------
 
         if st.form_submit_button("Submit"):
-            # The order must match your Google Sheet columns
             data = [
                 form_date.strftime("%Y-%m-%d"),
                 well_no,
@@ -224,7 +221,6 @@ def show_observation_form(sheet):
 def show_permit_form(sheet):
     st.header("🛠️ Daily Internal Permit Log")
     
-    # Lists for dropdowns
     DRILL_SITES = ["2485", "2566", "2534", "1969", "2549", "1972"]
     PERMIT_TYPES = ["Hot", "Cold", "CSE", "EOLB"]
     PERMIT_ISSUERS = ["VISHNU MOHAN", "UNNIMON SRINIVASAN"]
@@ -281,39 +277,65 @@ def show_heavy_vehicle_form(sheet):
     st.header("🚚 Heavy Vehicle Entry Form")
     VEHICLE_LIST = ["Bus", "Dump Truck", "Low Bed", "Trailer", "Water Tanker", "Mini Bus", "Flat Truck"]
     with st.form("vehicle_form", clear_on_submit=True):
-        vehicle_type = st.selectbox("Vehicle Type", VEHICLE_LIST)
-        make = st.text_input("Make")
-        plate_no = st.text_input("Plate No")
-        asset_code = st.text_input("Asset Code")
-        owner = st.text_input("Owner")
-        mvpi_expiry = st.date_input("MVPI Expiry date").strftime("%Y-%m-%d")
-        insurance_expiry = st.date_input("Insurance Expiry").strftime("%Y-%m-%d")
-        driver_name = st.text_input("Driver Name")
-        iqama_no = st.text_input("Iqama No")
-        licence_expiry = st.date_input("Licence Expiry").strftime("%Y-%m-%d")
-        qr_code = st.text_input("Q.R code")
-        fa_box = st.selectbox("F.A Box", ["Available", "Not Available", "Expired", "Inadequate Medicine"])
-        fire_ext_tp_expiry = st.date_input("Fire Extinguisher T.P Expiry").strftime("%Y-%m-%d")
-        pwas_status = st.selectbox("PWAS Status", ["Working", "Not Working", "Alarm Not Audible", "Faulty Camera/Monitor", "N/A"])
-        seatbelt_damaged = st.selectbox("Seat belt damaged", ["Yes", "No", "N/A"])
-        tyre_condition = st.selectbox("Tyre Condition", ["Good", "Worn Out", "Damaged", "Needs Replacement", "N/A"])
-        suspension_systems = st.selectbox("Suspension Systems", ["Good", "Faulty", "Needs Repair", "Damaged", "N/A"])
-        remarks = st.text_input("Remarks")
+        
+        # --- NEW MULTI-COLUMN LAYOUT ---
+        st.subheader("Vehicle & Driver Information")
+        c1, c2 = st.columns(2)
+        vehicle_type = c1.selectbox("Vehicle Type", VEHICLE_LIST)
+        make = c2.text_input("Make")
+        plate_no = c1.text_input("Plate No")
+        asset_code = c2.text_input("Asset Code")
+        owner = c1.text_input("Owner")
+        qr_code = c2.text_input("Q.R code")
+        driver_name = c1.text_input("Driver Name")
+        iqama_no = c2.text_input("Iqama No")
 
-        data = {
-            "Vehicle Type": vehicle_type, "Make": make, "Plate No": plate_no, "Asset Code": asset_code,
-            "Owner": owner, "MVPI Expiry date": mvpi_expiry, "Insurance Expiry": insurance_expiry,
-            "Driver Name": driver_name, "Iqama No": iqama_no, "Licence Expiry": licence_expiry,
-            "Q.R code": qr_code, "F.A Box": fa_box, "Fire Extinguisher T.P Expiry": fire_ext_tp_expiry,
-            "PWAS Status": pwas_status, "Seat belt damaged": seatbelt_damaged, "Tyre Condition": tyre_condition,
-            "Suspension Systems": suspension_systems, "Remarks": remarks
-        }
+        st.subheader("Expiry Dates")
+        d1, d2 = st.columns(2)
+        mvpi_expiry = d1.date_input("MVPI Expiry date")
+        insurance_expiry = d2.date_input("Insurance Expiry")
+        licence_expiry = d1.date_input("Licence Expiry")
+        fire_ext_tp_expiry = d2.date_input("Fire Extinguisher T.P Expiry")
+
+        st.subheader("Condition & Status")
+        s1, s2 = st.columns(2)
+        fa_box = s1.selectbox("F.A Box", ["Available", "Not Available", "Expired", "Inadequate Medicine"])
+        pwas_status = s2.selectbox("PWAS Status", ["Working", "Not Working", "Alarm Not Audible", "Faulty Camera/Monitor", "N/A"])
+        seatbelt_damaged = s1.selectbox("Seat belt damaged", ["Yes", "No", "N/A"])
+        tyre_condition = s2.selectbox("Tyre Condition", ["Good", "Worn Out", "Damaged", "Needs Replacement", "N/A"])
+        suspension_systems = s1.selectbox("Suspension Systems", ["Good", "Faulty", "Needs Repair", "Damaged", "N/A"])
+        
+        remarks = st.text_area("Remarks")
+        # ------------------------------------
+
         if st.form_submit_button("Submit"):
+            # The order must match your Google Sheet columns EXACTLY
+            data = [
+                vehicle_type, 
+                make, 
+                plate_no, 
+                asset_code,
+                owner, 
+                mvpi_expiry.strftime("%Y-%m-%d"), 
+                insurance_expiry.strftime("%Y-%m-%d"),
+                driver_name, 
+                iqama_no, 
+                licence_expiry.strftime("%Y-%m-%d"),
+                qr_code, 
+                fa_box, 
+                fire_ext_tp_expiry.strftime("%Y-%m-%d"),
+                pwas_status, 
+                seatbelt_damaged, 
+                tyre_condition,
+                suspension_systems, 
+                remarks
+            ]
             try:
-                sheet.append_row(list(data.values()))
+                sheet.append_row(data)
                 st.success("✅ Heavy Vehicle submitted successfully!")
             except Exception as e:
                 st.error(f"❌ Error: {e}")
+
 
 # -------------------- ADVANCED DASHBOARD --------------------
 def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_vehicle_sheet):
