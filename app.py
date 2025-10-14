@@ -179,23 +179,44 @@ def show_observation_form(sheet):
     st.header("📋 Daily HSE Site Observation Entry Form")
     well_numbers = ["2334", "2556", "1858", "2433", "2553", "2447"]
     with st.form("obs_form", clear_on_submit=True):
-        form_date = st.date_input("Date")
-        data = {
-            "DATE": form_date.strftime("%Y-%m-%d"),
-            "WELL NO": st.selectbox("Well No", well_numbers),
-            "AREA": st.text_input("Area"),
-            "OBSERVER NAME": st.text_input("Observer Name"),
-            "OBSERVATION DETAILS": st.text_area("Observation Details"),
-            "RECOMMENDED SOLUTION/ACTION TAKEN": st.text_area("Recommended Action"),
-            "SUPERVISOR NAME": st.text_input("Supervisor Name"),
-            "DISCIPLINE": st.text_input("Discipline"),
-            "CATEGORY": st.text_input("Category"),
-            "CLASSIFICATION": st.selectbox("Classification", ["POSITIVE", "UNSAFE CONDITION", "UNSAFE ACT"]),
-            "STATUS": st.selectbox("Status", ["Open", "Closed"])
-        }
+        
+        # --- NEW TWO-COLUMN LAYOUT ---
+        col1, col2 = st.columns(2)
+
+        with col1:
+            form_date = st.date_input("Date")
+            area = st.text_input("Area")
+            observer_name = st.text_input("Observer Name")
+            discipline = st.text_input("Discipline")
+            classification = st.selectbox("Classification", ["POSITIVE", "UNSAFE CONDITION", "UNSAFE ACT"])
+
+        with col2:
+            well_no = st.selectbox("Well No", well_numbers)
+            supervisor_name = st.text_input("Supervisor Name")
+            category = st.text_input("Category")
+            status = st.selectbox("Status", ["Open", "Closed"])
+        
+        obs_details = st.text_area("Observation Details")
+        rec_action = st.text_area("Recommended Action")
+        # -----------------------------
+
         if st.form_submit_button("Submit"):
+            # The order must match your Google Sheet columns
+            data = [
+                form_date.strftime("%Y-%m-%d"),
+                well_no,
+                area,
+                observer_name,
+                obs_details,
+                rec_action,
+                supervisor_name,
+                discipline,
+                category,
+                classification,
+                status
+            ]
             try:
-                sheet.append_row(list(data.values()))
+                sheet.append_row(data)
                 st.success("✅ Observation submitted successfully!")
             except Exception as e:
                 st.error(f"❌ Error submitting data: {e}")
@@ -226,7 +247,6 @@ def show_permit_form(sheet):
     ]
 
     with st.form("permit_form", clear_on_submit=True):
-        # --- NEW TWO-COLUMN LAYOUT ---
         col1, col2 = st.columns(2)
         
         with col1:
@@ -240,10 +260,8 @@ def show_permit_form(sheet):
             permit_issuer = st.selectbox("Permit Issuer", PERMIT_ISSUERS)
 
         activity = st.text_area("Activity")
-        # -----------------------------
 
         if st.form_submit_button("Submit"):
-            # The order must match your Google Sheet columns
             data = [
                 date_val.strftime("%Y-%m-%d"),
                 drill_site,
