@@ -382,10 +382,9 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 )
                 st.plotly_chart(fig_issuer, use_container_width=True)
         
-        # --- NEW CHART FOR PERMIT RECEIVER ---
+        # --- MODIFIED SECTION: REPLACED TREND WITH RECEIVER CHART ---
         if 'PERMIT RECEIVER' in df_permit.columns:
             st.subheader("Permits Handled by Receiver")
-            # Using nlargest(15) to keep the chart clean if there are many receivers
             receiver_counts = df_permit['PERMIT RECEIVER'].value_counts().nlargest(15).reset_index()
             fig_receiver = px.bar(
                 receiver_counts,
@@ -393,9 +392,9 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 labels={'count': 'Number of Permits', 'PERMIT RECEIVER': 'Receiver Name'},
                 text_auto=True
             )
-            fig_receiver.update_layout(xaxis_tickangle=-45) # Angle names for readability
+            fig_receiver.update_layout(xaxis_tickangle=-45)
             st.plotly_chart(fig_receiver, use_container_width=True)
-        # ----------------------------------------
+        # -----------------------------------------------------------
         
         st.markdown("---")
         st.subheader("Full Permit Log Data")
