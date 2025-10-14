@@ -71,7 +71,6 @@ def get_sheets():
                 ws.append_row(headers)
         return ws
     
-    # CORRECTED: Headers now match your sheet exactly, including "Palte No."
     heavy_equip_headers = [
         "Equipment type", "Make", "Palte No.", "Asset code", "Owner", "T.P inspection date", "T.P Expiry date",
         "Insurance expiry date", "Operator Name", "Iqama NO", "T.P Card type", "T.P Card Number",
@@ -148,7 +147,6 @@ def show_equipment_form(sheet):
         cols = st.columns(2)
         equipment_type = cols[0].selectbox("Equipment type", EQUIPMENT_LIST)
         make = cols[1].text_input("Make")
-        # CORRECTED: Form label matches the header
         plate_no = cols[0].text_input("Palte No.")
         asset_code = cols[1].text_input("Asset code")
         owner = cols[0].text_input("Owner")
@@ -157,7 +155,6 @@ def show_equipment_form(sheet):
 
         st.subheader("Expiry Dates")
         cols_dates = st.columns(2)
-        # UPDATED: Changed date format for submission
         tp_insp_date = cols_dates[0].date_input("T.P inspection date").strftime("%d %B %Y")
         tp_expiry = cols_dates[1].date_input("T.P Expiry date").strftime("%d %B %Y")
         insurance_expiry = cols_dates[0].date_input("Insurance expiry date").strftime("%d %B %Y")
@@ -191,7 +188,6 @@ def show_observation_form(sheet):
     with st.form("obs_form", clear_on_submit=True):
         form_date = st.date_input("Date")
         data = {
-            # UPDATED: Changed date format for submission
             "DATE": form_date.strftime("%d %B %Y"),
             "WELL NO": st.selectbox("Well No", well_numbers),
             "AREA": st.text_input("Area"),
@@ -216,7 +212,6 @@ def show_permit_form(sheet):
     with st.form("permit_form", clear_on_submit=True):
         data = {
             "DATE": st.date_input("Date").strftime("%d %B %Y"),
-            # REMOVED "DRILL SITE" FIELD AS REQUESTED
             "PERMIT NO": st.text_input("Permit No"),
             "TYPE OF PERMIT": st.text_input("Type of Permit"),
             "ACTIVITY": st.text_area("Activity"),
@@ -230,7 +225,6 @@ def show_permit_form(sheet):
             except Exception as e:
                 st.error(f"❌ Error submitting data: {e}")
 
-
 def show_heavy_vehicle_form(sheet):
     st.header("🚚 Heavy Vehicle Entry Form")
     VEHICLE_LIST = ["Bus", "Dump Truck", "Low Bed", "Trailer", "Water Tanker", "Mini Bus", "Flat Truck"]
@@ -240,16 +234,13 @@ def show_heavy_vehicle_form(sheet):
         plate_no = st.text_input("Plate No")
         asset_code = st.text_input("Asset Code")
         owner = st.text_input("Owner")
-        # UPDATED: Changed date format for submission
         mvpi_expiry = st.date_input("MVPI Expiry date").strftime("%d %B %Y")
         insurance_expiry = st.date_input("Insurance Expiry").strftime("%d %B %Y")
         driver_name = st.text_input("Driver Name")
         iqama_no = st.text_input("Iqama No")
-        # UPDATED: Changed date format for submission
         licence_expiry = st.date_input("Licence Expiry").strftime("%d %B %Y")
         qr_code = st.text_input("Q.R code")
         fa_box = st.selectbox("F.A Box", ["Available", "Not Available", "Expired", "Inadequate Medicine"])
-        # UPDATED: Changed date format for submission
         fire_ext_tp_expiry = st.date_input("Fire Extinguisher T.P Expiry").strftime("%d %B %Y")
         pwas_status = st.selectbox("PWAS Status", ["Working", "Not Working", "Alarm Not Audible", "Faulty Camera/Monitor", "N/A"])
         seatbelt_damaged = st.selectbox("Seat belt damaged", ["Yes", "No", "N/A"])
@@ -278,6 +269,85 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
     tab_obs, tab_permit, tab_eqp, tab_veh = st.tabs([
         "📋 Observation", "🛠️ Permit", "🚜 Heavy Equipment", "🚚 Heavy Vehicle"
     ])
+    
+    # --- NEW: PERMIT DASHBOARD TAB ---
+    with tab_permit:
+        st.subheader("Permit Log Analytics")
+        try:
+            df_permit = pd.DataFrame(permit_sheet.get_all_records())
+        except gspread.exceptions.GSpreadException as e:
+            st.error(f"Could not load permit data from Google Sheets: {e}")
+            return # Use return to stop execution if data fails to load
+
+        if df_permit.empty:
+            st.info("No permit data available to display.")
+        else:
+            # --- Data Processing ---
+            df_permit['DATE'] = df_permit['DATE'].apply(parse_date)
+            df_permit.dropna(subset=['DATE'], inplace=True) # Remove rows where date could not be parsed
+            df_permit['DATE'] = pd.to_datetime(df_permit['DATE'])
+
+            # --- KPIs ---
+            st.markdown("##### Key Metrics")
+            total_permits = len(df_permit)
+            permits_today = df_permit[df_permit['DATE'].dt.date == date.today()].shape[0]
+            # Ensure 'TYPE OF PERMIT' column exists and is not empty before using .mode()
+            if 'TYPE OF PERMIT' in df_permit.columns and not df_permit['TYPE OF PERMIT'].empty:
+                 common_permit_type = df_permit['TYPE OF PERMIT'].mode()[0]
+            else:
+                 common_permit_type = "N/A"
+
+            kpi1, kpi2, kpi3 = st.columns(3)
+            kpi1.metric(label="Total Permits Issued", value=total_permits)
+            kpi2.metric(label="Permits Issued Today", value=permits_today)
+            kpi3.metric(label="Most Common Permit", value=common_permit_type)
+
+            st.markdown("---")
+
+            # --- Visualizations ---
+            st.markdown("##### Visual Insights")
+            
+            # Chart 1: Permits Issued Over Time
+            permits_by_day = df_permit.groupby(df_permit['DATE'].dt.date).size().reset_index(name='count')
+            fig_daily = px.bar(
+                permits_by_day,
+                x='DATE', y='count',
+                title='Permits Issued Per Day',
+                labels={'count': 'Number of Permits', 'DATE': 'Date'},
+                text_auto=True
+            )
+            st.plotly_chart(fig_daily, use_container_width=True)
+
+            c1, c2 = st.columns(2)
+            # Chart 2: Permit Type Distribution
+            with c1:
+                 if 'TYPE OF PERMIT' in df_permit.columns:
+                     fig_type = px.pie(
+                         df_permit, names='TYPE OF PERMIT', title='Distribution of Permit Types',
+                         hole=0.3
+                     )
+                     st.plotly_chart(fig_type, use_container_width=True)
+            
+            # Chart 3: Top Permit Issuers
+            with c2:
+                if 'PERMIT ISSUER' in df_permit.columns:
+                    issuer_counts = df_permit['PERMIT ISSUER'].value_counts().nlargest(10).reset_index()
+                    fig_issuer = px.bar(
+                        issuer_counts,
+                        x='count', y='PERMIT ISSUER',
+                        orientation='h',
+                        title='Top 10 Permit Issuers',
+                        labels={'count': 'Number of Permits', 'PERMIT ISSUER': 'Issuer Name'},
+                        text_auto=True
+                    )
+                    fig_issuer.update_layout(yaxis={'categoryorder':'total ascending'})
+                    st.plotly_chart(fig_issuer, use_container_width=True)
+
+            st.markdown("---")
+            
+            # --- Full Data View ---
+            st.markdown("##### Full Permit Log")
+            st.dataframe(df_permit, use_container_width=True)
 
     with tab_eqp:
         st.subheader("Heavy Equipment Analytics")
@@ -303,7 +373,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         # --- T.P Card Specific Expiry Alert ---
         st.subheader("🚨 T.P Card Expiry Alerts")
         tp_card_col = "T.P Card expiry date"
-        # CORRECTED: Changed "Plate No" to "Palte No." to match your sheet
         tp_required_cols = ["Equipment type", "Palte No.", "Owner", tp_card_col]
 
         if all(col in df_equip.columns for col in tp_required_cols):
@@ -329,8 +398,11 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
 
         for col in date_cols:
              if col in df_equip.columns:
-                 expired_count += df_equip[df_equip[col] < today].shape[0]
-                 expiring_soon_count += df_equip[(df_equip[col] >= today) & (df_equip[col] <= ten_days)].shape[0]
+                # Ensure the column contains valid date objects before comparing
+                valid_dates = pd.to_datetime(df_equip[col], errors='coerce').dt.date
+                expired_count += (valid_dates < today).sum()
+                expiring_soon_count += ((valid_dates >= today) & (valid_dates <= ten_days)).sum()
+
 
         kpi1, kpi2, kpi3 = st.columns(3)
         kpi1.metric(label="Total Equipment", value=total_equipment)
@@ -344,11 +416,14 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         expired_dfs = []
         for col in date_cols:
             if col in df_equip.columns:
-                # CORRECTED: Changed "Plate No" to "Palte No." to match your sheet
                 required_cols = ["Equipment type", "Palte No.", "Owner", col]
                 
                 if all(c in df_equip.columns for c in required_cols):
-                    expired_df = df_equip.loc[df_equip[col] <= ten_days, required_cols].copy()
+                    # Filter rows where the date is not NaT (Not a Time)
+                    valid_dates_mask = pd.notna(df_equip[col])
+                    temp_df = df_equip[valid_dates_mask]
+                    
+                    expired_df = temp_df.loc[temp_df[col] <= ten_days, required_cols].copy()
                     expired_df.rename(columns={col: "Expiry Date"}, inplace=True)
                     expired_df["Document Type"] = col.replace(" date", "").replace(" expiry", "")
                     expired_dfs.append(expired_df)
