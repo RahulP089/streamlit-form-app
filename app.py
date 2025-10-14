@@ -205,6 +205,8 @@ def show_permit_form(sheet):
     
     # Lists for dropdowns
     DRILL_SITES = ["2485", "2566", "2534", "1969", "2549", "1972"]
+    PERMIT_TYPES = ["Hot", "Cold", "CSE", "EOLB"]
+    PERMIT_ISSUERS = ["VISHNU MOHAN", "UNNIMON SRINIVASAN"]
     PERMIT_RECEIVERS = [
         "MD MEHEDI HASAN NAHID", "JEFFREY VERBO YOSORES", "RAMESH KOTHAPALLY BHUMAIAH",
         "ALAA ALI ALI ALQURAISHI", "VALDIMIR FERNANDO", "PRINCE BRANDON LEE RAJU",
@@ -225,14 +227,17 @@ def show_permit_form(sheet):
 
     with st.form("permit_form", clear_on_submit=True):
         data = {
-            # --- "AREA" field removed ---
             "DATE": st.date_input("Date").strftime("%Y-%m-%d"),
             "DRILL SITE": st.selectbox("Drill Site", DRILL_SITES),
             "PERMIT NO": st.text_input("Permit No"),
-            "TYPE OF PERMIT": st.text_input("Type of Permit"),
+            # --- MODIFIED LINE ---
+            "TYPE OF PERMIT": st.selectbox("Type of Permit", PERMIT_TYPES),
+            # ---------------------
             "ACTIVITY": st.text_area("Activity"),
             "PERMIT RECEIVER": st.selectbox("Permit Receiver", PERMIT_RECEIVERS),
-            "PERMIT ISSUER": st.text_input("Permit Issuer"),
+            # --- MODIFIED LINE ---
+            "PERMIT ISSUER": st.selectbox("Permit Issuer", PERMIT_ISSUERS),
+            # ---------------------
         }
         if st.form_submit_button("Submit"):
             try:
