@@ -225,11 +225,9 @@ def show_permit_form(sheet):
 
     with st.form("permit_form", clear_on_submit=True):
         data = {
-            "AREA": st.text_input("Area"),
+            # --- "AREA" field removed ---
             "DATE": st.date_input("Date").strftime("%Y-%m-%d"),
-            # --- MODIFIED LINE ---
             "DRILL SITE": st.selectbox("Drill Site", DRILL_SITES),
-            # ---------------------
             "PERMIT NO": st.text_input("Permit No"),
             "TYPE OF PERMIT": st.text_input("Type of Permit"),
             "ACTIVITY": st.text_area("Activity"),
