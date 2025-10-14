@@ -130,7 +130,7 @@ def sidebar():
             return sub_menu
         return menu
 
-# -------------------- FORMS (UNCHANGED) --------------------
+# -------------------- FORMS --------------------
 def show_equipment_form(sheet):
     st.header("🚜 Heavy Equipment Entry Form")
     EQUIPMENT_LIST = [
@@ -204,6 +204,26 @@ def show_observation_form(sheet):
 
 def show_permit_form(sheet):
     st.header("🛠️ Daily Internal Permit Log")
+    
+    # List of names for the dropdown
+    PERMIT_RECEIVERS = [
+        "MD MEHEDI HASAN NAHID", "JEFFREY VERBO YOSORES", "RAMESH KOTHAPALLY BHUMAIAH",
+        "ALAA ALI ALI ALQURAISHI", "VALDIMIR FERNANDO", "PRINCE BRANDON LEE RAJU",
+        "JEES RAJ RAJAN ALPHONSA", "BRAYAN DINESH", "EZBORN NGUNYI MBATIA",
+        "AHILAN THANKARAJ", "MOHAMMAD FIROZ ALAM", "PRAVEEN SAHANI",
+        "KANNAN GANESAN", "ARUN MANAYATHU ANANDH", "ANANDHU SASIDHARAN",
+        "NINO URSAL CANON", "REJIL RAVI", "SIVA PRAVEEN SUGUMARAN",
+        "AKHIL ASHOKAN", "OMAR MAHUSAY DATANGEL", "MAHAMMAD SINAN",
+        "IRSHAD ALI MD QUYOOM", "RAISHKHA IQBALKHA PATHAN", "ABHILASH AMBAREEKSHAN",
+        "SHIVKUMAR MANIKAPPA MANIKAPPA", "VAMSHIKRISHNA POLASA", "NIVIN PRASAD",
+        "DHAVOUTH SULAIMAN JEILANI", "WINDY BLANCASABELLA", "MAHTAB ALAM",
+        "BERIN ROHIN JOSEPH BENZIGER", "NEMWEL GWAKO", "RITHIC SAI",
+        "SHAIK KHADEER", "SIMON GACHAU MUCHIRI", "JARUZELSKI MELENDES PESINO",
+        "HAIDAR NASSER MOHAMMED ALKHALAF", "JEYARAJA JAYAPAL",
+        "HASHEM ABDULMAJEED ALBAHRANI", "PRATHEEP RADHAKRISHNAN",
+        "REYNANTE CAYUMO AMOYO", "JAY MARASIGAN BONDOC", "SHAHWAZ KHAN"
+    ]
+
     with st.form("permit_form", clear_on_submit=True):
         data = {
             "AREA": st.text_input("Area"),
@@ -212,7 +232,7 @@ def show_permit_form(sheet):
             "PERMIT NO": st.text_input("Permit No"),
             "TYPE OF PERMIT": st.text_input("Type of Permit"),
             "ACTIVITY": st.text_area("Activity"),
-            "PERMIT RECEIVER": st.text_input("Permit Receiver"),
+            "PERMIT RECEIVER": st.selectbox("Permit Receiver", PERMIT_RECEIVERS),
             "PERMIT ISSUER": st.text_input("Permit Issuer"),
         }
         if st.form_submit_button("Submit"):
@@ -221,7 +241,6 @@ def show_permit_form(sheet):
                 st.success("✅ Permit submitted successfully!")
             except Exception as e:
                 st.error(f"❌ Error submitting data: {e}")
-
 
 def show_heavy_vehicle_form(sheet):
     st.header("🚚 Heavy Vehicle Entry Form")
@@ -261,7 +280,7 @@ def show_heavy_vehicle_form(sheet):
             except Exception as e:
                 st.error(f"❌ Error: {e}")
 
-# -------------------- ADVANCED DASHBOARD (UPDATED) --------------------
+# -------------------- ADVANCED DASHBOARD --------------------
 def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_vehicle_sheet):
     st.header("📊 Dashboard")
     tab_obs, tab_permit, tab_eqp, tab_veh = st.tabs([
@@ -284,7 +303,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         date_cols = ["T.P Expiry date", "Insurance expiry date", "T.P Card expiry date", "F.E TP expiry"]
         for col in date_cols:
              if col in df_equip.columns:
-                df_equip[col] = df_equip[col].apply(parse_date)
+                 df_equip[col] = df_equip[col].apply(parse_date)
 
         today = date.today()
         ten_days = today + timedelta(days=10)
@@ -310,7 +329,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         
         st.markdown("---")
 
-
         # --- KPIs ---
         total_equipment = len(df_equip)
         expired_count = 0
@@ -318,8 +336,8 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
 
         for col in date_cols:
              if col in df_equip.columns:
-                expired_count += df_equip[df_equip[col] < today].shape[0]
-                expiring_soon_count += df_equip[(df_equip[col] >= today) & (df_equip[col] <= ten_days)].shape[0]
+                 expired_count += df_equip[df_equip[col] < today].shape[0]
+                 expiring_soon_count += df_equip[(df_equip[col] >= today) & (df_equip[col] <= ten_days)].shape[0]
 
         kpi1, kpi2, kpi3 = st.columns(3)
         kpi1.metric(label="Total Equipment", value=total_equipment)
@@ -351,7 +369,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             else:
                 alert_df["Status"] = alert_df["Expiry Date"].apply(lambda d: "Expired" if d < today else "Expiring Soon")
                 st.dataframe(alert_df, use_container_width=True)
-
 
         st.markdown("---")
 
@@ -394,10 +411,9 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         df_display = df_equip.copy()
         for col in date_cols:
              if col in df_display.columns:
-                df_display[col] = df_display[col].apply(badge_expiry, expiry_days=10)
+                 df_display[col] = df_display[col].apply(badge_expiry, expiry_days=10)
         
         st.dataframe(df_display, use_container_width=True)
-
 
 # -------------------- MAIN APP --------------------
 def main():
