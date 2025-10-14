@@ -137,7 +137,7 @@ def sidebar():
             return sub_menu
         return menu
 
-# -------------------- FORMS (UNCHANGED) --------------------
+# -------------------- FORMS --------------------
 def show_equipment_form(sheet):
     st.header("🚜 Heavy Equipment Entry Form")
     EQUIPMENT_LIST = [
@@ -216,7 +216,7 @@ def show_permit_form(sheet):
     with st.form("permit_form", clear_on_submit=True):
         data = {
             "DATE": st.date_input("Date").strftime("%d %B %Y"),
-            "DRILL SITE": st.text_input("Drill Site"),
+            # REMOVED "DRILL SITE" FIELD AS REQUESTED
             "PERMIT NO": st.text_input("Permit No"),
             "TYPE OF PERMIT": st.text_input("Type of Permit"),
             "ACTIVITY": st.text_area("Activity"),
@@ -449,4 +449,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
