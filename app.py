@@ -215,8 +215,6 @@ def show_permit_form(sheet):
     st.header("🛠️ Daily Internal Permit Log")
     with st.form("permit_form", clear_on_submit=True):
         data = {
-            "AREA": st.text_input("Area"),
-            # UPDATED: Changed date format for submission
             "DATE": st.date_input("Date").strftime("%d %B %Y"),
             "DRILL SITE": st.text_input("Drill Site"),
             "PERMIT NO": st.text_input("Permit No"),
@@ -451,3 +449,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
