@@ -226,22 +226,35 @@ def show_permit_form(sheet):
     ]
 
     with st.form("permit_form", clear_on_submit=True):
-        data = {
-            "DATE": st.date_input("Date").strftime("%Y-%m-%d"),
-            "DRILL SITE": st.selectbox("Drill Site", DRILL_SITES),
-            "PERMIT NO": st.text_input("Permit No"),
-            # --- MODIFIED LINE ---
-            "TYPE OF PERMIT": st.selectbox("Type of Permit", PERMIT_TYPES),
-            # ---------------------
-            "ACTIVITY": st.text_area("Activity"),
-            "PERMIT RECEIVER": st.selectbox("Permit Receiver", PERMIT_RECEIVERS),
-            # --- MODIFIED LINE ---
-            "PERMIT ISSUER": st.selectbox("Permit Issuer", PERMIT_ISSUERS),
-            # ---------------------
-        }
+        # --- NEW TWO-COLUMN LAYOUT ---
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            date_val = st.date_input("Date")
+            permit_no = st.text_input("Permit No")
+            permit_receiver = st.selectbox("Permit Receiver", PERMIT_RECEIVERS)
+
+        with col2:
+            drill_site = st.selectbox("Drill Site", DRILL_SITES)
+            permit_type = st.selectbox("Type of Permit", PERMIT_TYPES)
+            permit_issuer = st.selectbox("Permit Issuer", PERMIT_ISSUERS)
+
+        activity = st.text_area("Activity")
+        # -----------------------------
+
         if st.form_submit_button("Submit"):
+            # The order must match your Google Sheet columns
+            data = [
+                date_val.strftime("%Y-%m-%d"),
+                drill_site,
+                permit_no,
+                permit_type,
+                activity,
+                permit_receiver,
+                permit_issuer
+            ]
             try:
-                sheet.append_row(list(data.values()))
+                sheet.append_row(data)
                 st.success("✅ Permit submitted successfully!")
             except Exception as e:
                 st.error(f"❌ Error submitting data: {e}")
