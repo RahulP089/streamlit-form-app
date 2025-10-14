@@ -25,21 +25,28 @@ def parse_date(s):
     if isinstance(s, (date, datetime)):
         return s.date() if isinstance(s, datetime) else s
     try:
-        return datetime.strptime(str(s).split(' ')[0], "%Y-%m-%d").date()
+        # UPDATED: Changed format to parse 'Day Month Year'
+        return datetime.strptime(str(s).split(' ')[0], "%d %B %Y").date()
     except (ValueError, TypeError):
-        return None
+        # Add a fallback for the old format to avoid breaking existing data
+        try:
+            return datetime.strptime(str(s).split(' ')[0], "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            return None
 
 def badge_expiry(d, expiry_days=10):
     """Creates a visual badge for expiry dates."""
     if d is None:
         return "⚪ Not Set"
     today = date.today()
+    # UPDATED: Changed date format in display strings
+    date_str = d.strftime('%d %B %Y')
     if d < today:
-        return f"🚨 Expired ({d.strftime('%Y-%m-%d')})"
+        return f"🚨 Expired ({date_str})"
     elif d <= today + timedelta(days=expiry_days):
-        return f"⚠️ Expires Soon ({d.strftime('%Y-%m-%d')})"
+        return f"⚠️ Expires Soon ({date_str})"
     else:
-        return f"✅ Valid ({d.strftime('%Y-%m-%d')})"
+        return f"✅ Valid ({date_str})"
 
 # -------------------- GOOGLE SHEETS CONNECTION --------------------
 @st.cache_resource(ttl=600) # Cache for 10 minutes
@@ -150,11 +157,12 @@ def show_equipment_form(sheet):
 
         st.subheader("Expiry Dates")
         cols_dates = st.columns(2)
-        tp_insp_date = cols_dates[0].date_input("T.P inspection date").strftime("%Y-%m-%d")
-        tp_expiry = cols_dates[1].date_input("T.P Expiry date").strftime("%Y-%m-%d")
-        insurance_expiry = cols_dates[0].date_input("Insurance expiry date").strftime("%Y-%m-%d")
-        fe_tp_expiry = cols_dates[1].date_input("F.E TP expiry").strftime("%Y-%m-%d")
-        tp_card_expiry = cols_dates[0].date_input("T.P Card expiry date").strftime("%Y-%m-%d")
+        # UPDATED: Changed date format for submission
+        tp_insp_date = cols_dates[0].date_input("T.P inspection date").strftime("%d %B %Y")
+        tp_expiry = cols_dates[1].date_input("T.P Expiry date").strftime("%d %B %Y")
+        insurance_expiry = cols_dates[0].date_input("Insurance expiry date").strftime("%d %B %Y")
+        fe_tp_expiry = cols_dates[1].date_input("F.E TP expiry").strftime("%d %B %Y")
+        tp_card_expiry = cols_dates[0].date_input("T.P Card expiry date").strftime("%d %B %Y")
 
         st.subheader("T.P Card & Status")
         cols_status = st.columns(2)
@@ -183,7 +191,8 @@ def show_observation_form(sheet):
     with st.form("obs_form", clear_on_submit=True):
         form_date = st.date_input("Date")
         data = {
-            "DATE": form_date.strftime("%Y-%m-%d"),
+            # UPDATED: Changed date format for submission
+            "DATE": form_date.strftime("%d %B %Y"),
             "WELL NO": st.selectbox("Well No", well_numbers),
             "AREA": st.text_input("Area"),
             "OBSERVER NAME": st.text_input("Observer Name"),
@@ -207,7 +216,8 @@ def show_permit_form(sheet):
     with st.form("permit_form", clear_on_submit=True):
         data = {
             "AREA": st.text_input("Area"),
-            "DATE": st.date_input("Date").strftime("%Y-%m-%d"),
+            # UPDATED: Changed date format for submission
+            "DATE": st.date_input("Date").strftime("%d %B %Y"),
             "DRILL SITE": st.text_input("Drill Site"),
             "PERMIT NO": st.text_input("Permit No"),
             "TYPE OF PERMIT": st.text_input("Type of Permit"),
@@ -232,14 +242,17 @@ def show_heavy_vehicle_form(sheet):
         plate_no = st.text_input("Plate No")
         asset_code = st.text_input("Asset Code")
         owner = st.text_input("Owner")
-        mvpi_expiry = st.date_input("MVPI Expiry date").strftime("%Y-%m-%d")
-        insurance_expiry = st.date_input("Insurance Expiry").strftime("%Y-%m-%d")
+        # UPDATED: Changed date format for submission
+        mvpi_expiry = st.date_input("MVPI Expiry date").strftime("%d %B %Y")
+        insurance_expiry = st.date_input("Insurance Expiry").strftime("%d %B %Y")
         driver_name = st.text_input("Driver Name")
         iqama_no = st.text_input("Iqama No")
-        licence_expiry = st.date_input("Licence Expiry").strftime("%Y-%m-%d")
+        # UPDATED: Changed date format for submission
+        licence_expiry = st.date_input("Licence Expiry").strftime("%d %B %Y")
         qr_code = st.text_input("Q.R code")
         fa_box = st.selectbox("F.A Box", ["Available", "Not Available", "Expired", "Inadequate Medicine"])
-        fire_ext_tp_expiry = st.date_input("Fire Extinguisher T.P Expiry").strftime("%Y-%m-%d")
+        # UPDATED: Changed date format for submission
+        fire_ext_tp_expiry = st.date_input("Fire Extinguisher T.P Expiry").strftime("%d %B %Y")
         pwas_status = st.selectbox("PWAS Status", ["Working", "Not Working", "Alarm Not Audible", "Faulty Camera/Monitor", "N/A"])
         seatbelt_damaged = st.selectbox("Seat belt damaged", ["Yes", "No", "N/A"])
         tyre_condition = st.selectbox("Tyre Condition", ["Good", "Worn Out", "Damaged", "Needs Replacement", "N/A"])
@@ -284,7 +297,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         date_cols = ["T.P Expiry date", "Insurance expiry date", "T.P Card expiry date", "F.E TP expiry"]
         for col in date_cols:
              if col in df_equip.columns:
-                df_equip[col] = df_equip[col].apply(parse_date)
+                 df_equip[col] = df_equip[col].apply(parse_date)
 
         today = date.today()
         ten_days = today + timedelta(days=10)
@@ -318,8 +331,8 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
 
         for col in date_cols:
              if col in df_equip.columns:
-                expired_count += df_equip[df_equip[col] < today].shape[0]
-                expiring_soon_count += df_equip[(df_equip[col] >= today) & (df_equip[col] <= ten_days)].shape[0]
+                 expired_count += df_equip[df_equip[col] < today].shape[0]
+                 expiring_soon_count += df_equip[(df_equip[col] >= today) & (df_equip[col] <= ten_days)].shape[0]
 
         kpi1, kpi2, kpi3 = st.columns(3)
         kpi1.metric(label="Total Equipment", value=total_equipment)
@@ -394,7 +407,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         df_display = df_equip.copy()
         for col in date_cols:
              if col in df_display.columns:
-                df_display[col] = df_display[col].apply(badge_expiry, expiry_days=10)
+                 df_display[col] = df_display[col].apply(badge_expiry, expiry_days=10)
         
         st.dataframe(df_display, use_container_width=True)
 
