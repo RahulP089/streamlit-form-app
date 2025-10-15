@@ -179,27 +179,31 @@ def show_observation_form(sheet):
     st.header("📋 Daily HSE Site Observation Entry Form")
     well_numbers = ["2334", "2556", "1858", "2433", "2553", "2447"]
     
-    # --- MODIFIED PART ---
-    # List of observers sorted alphabetically
     OBSERVER_NAMES = [
         "Ajish", "Akhil Mohan", "Aqib", "Arfan", "Asim", "Ashraf Khan", "Bijo",
         "Felin", "Habeeb", "Ilyas", "Irfan", "Jamali", "Joseph Cruz", "Mohsin",
         "Pradeep", "Rajshekar", "Ricken", "Shiva Kannan", "Shiva Subramaniyam",
         "Sudheesh", "Vaishak", "Vargheese", "Wali Alam", "Zaheer"
     ]
-    # --- END OF MODIFICATION ---
 
+    # --- MODIFIED PART ---
+    AREAS = [
+        "Well Head", "Flow Line", "OHPL", "Tie In", 
+        "Lay Down", "Cellar", "Remote Header"
+    ]
+    # --- END OF MODIFICATION ---
+    
     with st.form("obs_form", clear_on_submit=True):
         
         col1, col2 = st.columns(2)
 
         with col1:
             form_date = st.date_input("Date")
-            area = st.text_input("Area")
             # --- MODIFIED PART ---
-            # Replaced text_input with selectbox
-            observer_name = st.selectbox("Observer Name", OBSERVER_NAMES)
+            # Changed text_input to selectbox
+            area = st.selectbox("Area", AREAS)
             # --- END OF MODIFICATION ---
+            observer_name = st.selectbox("Observer Name", OBSERVER_NAMES)
             discipline = st.text_input("Discipline")
             classification = st.selectbox("Classification", ["POSITIVE", "UNSAFE CONDITION", "UNSAFE ACT"])
 
@@ -397,7 +401,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 )
                 st.plotly_chart(fig_issuer, use_container_width=True)
         
-        # --- NEW 2x2 GRID FOR CHARTS ---
         col3, col4 = st.columns(2)
         with col3:
             if 'PERMIT RECEIVER' in df_permit.columns:
@@ -421,7 +424,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                     text_auto=True
                 )
                 st.plotly_chart(fig_site, use_container_width=True)
-        # ------------------------------------
 
         st.markdown("---")
         st.subheader("Full Permit Log Data")
