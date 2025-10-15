@@ -314,6 +314,11 @@ def show_permit_form(sheet):
     st.header("🛠️ Daily Internal Permit Log")
     
     DRILL_SITES = ["2485", "2566", "2534", "1969", "2549", "1972"]
+    # ✨ NEW: Added Work Locations list
+    WORK_LOCATIONS = [
+        "Well Head", "OHPL", "E&I Skid", "Burn Pit", "Cellar",
+        "Flow Line", "Lay down", "CP area"
+    ]
     PERMIT_TYPES = ["Hot", "Cold", "CSE", "EOLB"]
     PERMIT_ISSUERS = ["VISHNU MOHAN", "UNNIMON SRINIVASAN"]
     PERMIT_RECEIVERS = [
@@ -335,24 +340,29 @@ def show_permit_form(sheet):
     ]
 
     with st.form("permit_form", clear_on_submit=True):
+        # ✨ MODIFIED: Changed layout for better organization
         col1, col2 = st.columns(2)
         
         with col1:
             date_val = st.date_input("Date")
-            permit_no = st.text_input("Permit No")
+            drill_site = st.selectbox("Drill Site", DRILL_SITES)
+            permit_type = st.selectbox("Type of Permit", PERMIT_TYPES)
             permit_receiver = st.selectbox("Permit Receiver", PERMIT_RECEIVERS)
 
         with col2:
-            drill_site = st.selectbox("Drill Site", DRILL_SITES)
-            permit_type = st.selectbox("Type of Permit", PERMIT_TYPES)
+            permit_no = st.text_input("Permit No")
+            # ✨ NEW: Added Work Location selectbox
+            work_location = st.selectbox("Work Location", WORK_LOCATIONS)
             permit_issuer = st.selectbox("Permit Issuer", PERMIT_ISSUERS)
 
         activity = st.text_area("Activity")
 
         if st.form_submit_button("Submit"):
+            # ✨ MODIFIED: Added work_location to the data list
             data = [
                 date_val.strftime("%d-%b-%Y"),
                 drill_site,
+                work_location, # New field added
                 permit_no,
                 permit_type,
                 activity,
@@ -364,6 +374,7 @@ def show_permit_form(sheet):
                 st.success("✅ Permit submitted successfully!")
             except Exception as e:
                 st.error(f"❌ Error submitting data: {e}")
+
 
 def show_heavy_vehicle_form(sheet):
     st.header("🚚 Heavy Vehicle Entry Form")
@@ -641,7 +652,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
