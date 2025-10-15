@@ -522,8 +522,21 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         with col_viz1:
             if 'TYPE OF PERMIT' in df_filtered.columns:
                 st.write("**Permit Type Distribution**")
+                
+                # ✨ CHANGE: Define the color map for the pie chart as requested
+                permit_color_map = {
+                    'Hot': 'red',
+                    'Cold': 'lightblue',
+                    'EOLB': 'lightpink',
+                    'CSE': 'lightgray' # A sensible default for other types
+                }
+                
                 fig_type_pie = px.pie(
-                    df_filtered, names='TYPE OF PERMIT', hole=0.4,
+                    df_filtered, 
+                    names='TYPE OF PERMIT', 
+                    hole=0.4,
+                    color='TYPE OF PERMIT', # Specify the column for coloring
+                    color_discrete_map=permit_color_map # Apply the custom colors
                 )
                 fig_type_pie.update_traces(textposition='inside', textinfo='percent+label')
                 fig_type_pie.update_layout(showlegend=False, margin=dict(l=10, r=10, t=30, b=10))
@@ -597,7 +610,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
 
         date_cols = ["T.P Expiry date", "Insurance expiry date", "T.P Card expiry date", "F.E TP expiry"]
         for col in date_cols:
-              if col in df_equip.columns:
+             if col in df_equip.columns:
                     df_equip[col] = df_equip[col].apply(parse_date)
 
         today = date.today()
@@ -627,7 +640,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         expiring_soon_count = 0
 
         for col in date_cols:
-              if col in df_equip.columns:
+             if col in df_equip.columns:
                     expired_count += df_equip[df_equip[col] < today].shape[0]
                     expiring_soon_count += df_equip[(df_equip[col] >= today) & (df_equip[col] <= ten_days)].shape[0]
 
@@ -674,7 +687,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         st.subheader("Full Heavy Equipment Data")
         df_display_eq = df_equip.copy()
         for col in date_cols:
-              if col in df_display_eq.columns:
+             if col in df_display_eq.columns:
                     df_display_eq[col] = df_display_eq[col].apply(badge_expiry, expiry_days=10)
         
         st.dataframe(df_display_eq, use_container_width=True)
