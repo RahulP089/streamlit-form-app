@@ -21,25 +21,29 @@ HEAVY_VEHICLE_TAB = "Heavy Vehicles"
 
 # -------------------- UTILITIES --------------------
 def parse_date(s):
-    """Safely parses a string into a date object."""
+    """Safely parses a string into a date object, trying multiple formats."""
     if isinstance(s, (date, datetime)):
         return s.date() if isinstance(s, datetime) else s
-    try:
-        return datetime.strptime(str(s).split(' ')[0], "%Y-%m-%d").date()
-    except (ValueError, TypeError):
-        return None
+    # Try parsing the new format first, then fall back to the old one for existing data
+    for fmt in ("%d-%b-%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(str(s).split(' ')[0], fmt).date()
+        except (ValueError, TypeError):
+            continue
+    return None
 
 def badge_expiry(d, expiry_days=10):
     """Creates a visual badge for expiry dates."""
     if d is None:
         return "⚪ Not Set"
     today = date.today()
+    date_str = d.strftime('%d-%b-%Y')
     if d < today:
-        return f"🚨 Expired ({d.strftime('%Y-%m-%d')})"
+        return f"🚨 Expired ({date_str})"
     elif d <= today + timedelta(days=expiry_days):
-        return f"⚠️ Expires Soon ({d.strftime('%Y-%m-%d')})"
+        return f"⚠️ Expires Soon ({date_str})"
     else:
-        return f"✅ Valid ({d.strftime('%Y-%m-%d')})"
+        return f"✅ Valid ({date_str})"
 
 # -------------------- GOOGLE SHEETS CONNECTION --------------------
 @st.cache_resource(ttl=600) # Cache for 10 minutes
@@ -148,11 +152,12 @@ def show_equipment_form(sheet):
 
         st.subheader("Expiry Dates")
         cols_dates = st.columns(2)
-        tp_insp_date = cols_dates[0].date_input("T.P inspection date").strftime("%Y-%m-%d")
-        tp_expiry = cols_dates[1].date_input("T.P Expiry date").strftime("%Y-%m-%d")
-        insurance_expiry = cols_dates[0].date_input("Insurance expiry date").strftime("%Y-%m-%d")
-        fe_tp_expiry = cols_dates[1].date_input("F.E TP expiry").strftime("%Y-%m-%d")
-        tp_card_expiry = cols_dates[0].date_input("T.P Card expiry date").strftime("%Y-%m-%d")
+        date_format = "%d-%b-%Y"
+        tp_insp_date = cols_dates[0].date_input("T.P inspection date").strftime(date_format)
+        tp_expiry = cols_dates[1].date_input("T.P Expiry date").strftime(date_format)
+        insurance_expiry = cols_dates[0].date_input("Insurance expiry date").strftime(date_format)
+        fe_tp_expiry = cols_dates[1].date_input("F.E TP expiry").strftime(date_format)
+        tp_card_expiry = cols_dates[0].date_input("T.P Card expiry date").strftime(date_format)
 
         st.subheader("T.P Card & Status")
         cols_status = st.columns(2)
@@ -177,7 +182,7 @@ def show_equipment_form(sheet):
 
 def show_observation_form(sheet):
     st.header("📋 Daily HSE Site Observation Entry Form")
-    well_numbers = ["2334", "2556", "1858", "2433", "2553", "2447"]
+    well_numbers = ["2534", "2556", "1858", "2433", "2553", "2447","2485"]
     
     OBSERVER_NAMES = [
         "Ajish", "Akhil Mohan", "Aqib", "Arfan", "Asim", "Ashraf Khan", "Bijo",
@@ -185,32 +190,100 @@ def show_observation_form(sheet):
         "Pradeep", "Rajshekar", "Ricken", "Shiva Kannan", "Shiva Subramaniyam",
         "Sudheesh", "Vaishak", "Vargheese", "Wali Alam", "Zaheer"
     ]
-
-    # --- MODIFIED PART ---
+    
     AREAS = [
         "Well Head", "Flow Line", "OHPL", "Tie In", 
         "Lay Down", "Cellar", "Remote Header"
     ]
-    # --- END OF MODIFICATION ---
+
+    CATEGORIES = [
+        "Fall Protection/Personal Fall Arrest System Use/Falling Hazard",
+        "Trenching/Excavation/Shoring",
+        "Scaffolds, Ladders and Elevated work platforms",
+        "Crane and Lifting Devices",
+        "Heavy Equipment",
+        "Vehicles / Traffic Control",
+        "Hand/Power Tools and Electrical appliances",
+        "Electrical Safety",
+        "Hot work (Cutting/Welding/Brazing)",
+        "Fire prevention & Protection",
+        "Abrasive Blasting and Coating",
+        "Confined Space / Restricted area",
+        "Civil, Concrete Work",
+        "Compressed Gases",
+        "General Equipment's (Air Compressors/Power Generator etc.)",
+        "Work Permit, Risk Assessment, JSA & other procedures",
+        "Chemical Handling and Hazardous material",
+        "Environmental / Waste Management",
+        "Health, hygiene & welfare",
+        "Radiation and NDT",
+        "Security, Unsafe Behavior, and other project Requirements"
+    ]
+
+    SUPERVISOR_TRADE_MAP = {
+        "ANILKUMAR JANARDHANAN": "CONTROLLER-EQUIPMENT", "MANOJ THOMAS": "SUPERVISOR-SCAFFOLDING",
+        "SIVA PRASAD PILLAI": "WELL IN CHARGE", "JAYAN RAJANAN": "FOREMAN-PIPING",
+        "JAYAN PONNAN": "FOREMAN-PIPING", "MURUGAN VELAYUDHAN PERUMAL": "CONSTRUCTION-FOREMAN",
+        "RAJEEVAN NAIR THANKAPPAN": "QA/QC INSPECTOR-CIVIL", "MOHAMMAD ALI SHAIKH": "FOREMAN-PAINTING (C.P)",
+        "JEFFREY F. TABAMO": "CONSTRUCTION SUPERVISOR-E & I", "SHIVA PRASANTH": "SUPERVISOR-CIVIL",
+        "ORLANDO GURGUD": "SUPERVISOR-PAINTING CREW", "BHASKARAN PILLAI BIMAL": "SUPERVISOR-PAINTING CREW",
+        "MD MUBARAK MIAH": "QC INSPECTOR-PIPING", "MD MOSTACIMUR RAHMAN": "ELECTRICIAN",
+        "SHAHID KHAN": "ELECTRICIAN", "AHMAL SUHAIB": "SUPERVISOR-PIPING",
+        "MOHAMMED SALIM WAHIM": "SUPERVISOR-SAFETY", "SAHAJAHAN SHAIK": "CONSTRUCTION SUPERVISOR-CIVIL",
+        "AHMED SABIT": "QC INSPECTOR-COATING", "BHUTULI KUMAR": "SCAFFOLDER",
+        "BIBIN CHERIAN": "SUPERVISOR-CIVIL", "JOUHAR HUSSAIN": "QC INSPECTOR-INSTRUMENTATION",
+        "KARTHIK KOTTUKKAL UDHAYAKUMAR": "QC INSPECTOR-WELDING", "MOHD ILYAS": "CONSTRUCTION SUPERVISOR-PIPING",
+        "VIJENDER KUMAR BEHARI": "QC INSPECTOR-ELECTRICAL", "AZAGAR SHAHUL AHAN": "ELECTRICIAN",
+        "SHAHIN": "SCAFFOLDER", "PREM KUMAR CHAUDHARY": "FOREMAN-E&I",
+        "MD SABUJ MOLLAH": "SCAFFOLDER", "ROUF MD ABDUL RASHID": "QC INSPECTOR-INSTRUMENTATION",
+        "SAJU SADANANDAN": "SUPERVISOR-CIVIL", "CHANDU RAMAMURTHI": "QC INSPECTOR-MECHANICAL",
+        "KRISHNA BK": "SCAFFOLDER", "SASIDHARA KURUP": "FOREMAN-ELECTRICAL",
+        "SELVIN SEBASTIAN": "CONSTRUCTION SUPERVISOR-E & I", "REPLY MENDOZA SILVESTRE": "QC INSPECTOR-PIPING",
+        "SELVIN LEO SELVARAJ": "WELL IN CHARGE", "ANSELITO LABAL LURG": "QC INSPECTOR-COATING",
+        "SWAMY NAGA VAMSI": "SCAFFOLDER", "BRIHASPATI ADAK": "FOREMAN-CIVIL",
+        "JEROME GUEVARRA VILLAVER ROA": "QC INSPECTOR-ELECTRICAL (C.P)",
+        "IBRAHIM IMAM DIMACALING": "QC INSPECTOR-CIVIL (BATCHING PLANT)", "VISHNU S": "CONSTRUCTION SUPERVISOR-CIVIL",
+        "RABIN THAKUR BARAHI": "SCAFFOLDER", "MOHAMMAD AJMAL": "ELECTRICIAN",
+        "MOHAMMAD ANAS ABDUL SALAM": "QC INSPECTOR-WELDING", "NOLI BADAYO DIVINO": "QC INSPECTOR-ELECTRICAL",
+        "RAVI SINGH": "SUPERVISOR-CIVIL", "MOHAMMAD NAWAZ BARI": "QA/QC INSPECTOR-CIVIL",
+        "JUBARAJ KONDAGORLA": "SCAFFOLDER", "ALLAN MENDOZA ALFELOR": "QC INSPECTOR-PIPING",
+        "ANVAR MOHAMMED MANEEFA": "QC SUPERVISOR-CIVIL", "BALAKRISHNA": "FOREMAN-CIVIL",
+        "SUNIL KUMAR SAHU": "FOREMAN-CIVIL", "GEORGE ELAVUMPARAMBIL JOSY": "QC INSPECTOR-ELECTRICAL",
+        "MARCELING PODRIGUEZ SIANO": "QC INSPECTOR-TELECOM", "RAJESHWAR RAO NARAPAKA": "SUPERVISOR-SCAFFOLDING",
+        "MUMTAZ ALAM": "FOREMAN-INSTRUMENTATION", "ASHIQUE AHMED YADAV": "FOREMAN-CIVIL",
+        "QUAISAR ALI": "SUPERVISOR-ELECTRICAL", "ASHISH SINGH DHARAN": "FOREMAN-PIPING",
+        "ZEESHAN YOUSUF": "SUPERVISOR-CIVIL", "PRADEEP PRASAD": "SCAFFOLDER",
+        "SHIV MOHITO": "SCAFFOLDER (FIREWATCH)", "MOHAMMAD RAUSHAN": "SUPERVISOR-CIVIL",
+        "AHMED ELTAYIB SIDEEG ALI": "SUPERVISOR-CIVIL", "SRIVENKATESWARARAO ATIKE": "SUPERVISOR-SAFETY",
+        "AKRAM RAZZAK BIDI": "FOREMAN-SCAFFOLDING", "SURESH KUMAR": "WELL IN CHARGE",
+        "SENTHIL NATH": "FOREMAN-CIVIL", "ANOOPKUMAR": "SUPERVISOR-ELECTRICAL",
+        "VAIBHAV VINOD GIREJA": "SUPERVISOR-PIPING", "KHALID AHMED ABDULLAH BIN BATI": "ELECTRICIAN",
+        "MOHAMMED MARDI NAHAR ALRELEI": "ELECTRICIAN", "IBRAHIM SOLDEV IBRAHIM SUWAYWAT": "ELECTRICIAN",
+        "ABDULLAH SAAD BIN HASSAN ALHADHOUD": "SCAFFOLDER", "MOHAMMED ESSAM HUSSEIN ELSHAMI": "ELECTRICIAN",
+        "Murtadha Hussein ALSaqer": "QC INSPECTOR-PIPING", "SURYA PRATAP": "CONSTRUCTION SUPERVISOR-PIPING",
+        "WASEEM ABBAS KHADIM HUSSAIN": "QA/QC INSPECTOR-CIVIL", "LALIT KUMAR": "FOREMAN-INSTRUMENTATION",
+        "JEROME HIGOY VALDEZ": "QC SUPERVISOR-E&I", "SREEDHARAN PARAMESHETHAN": "QC SUPERVISOR-PIPING",
+        "RAJA ALAGAPPAN": "SUPERVISOR-PAINTING CREW", "UMASHANKER SAH": "QC INSPECTOR-WELDING",
+        "AJITHKUMAR": "SUPERVISOR-PIPING","PAWAN":"SUPERVISOR-PIPING"
+    }
     
+    supervisor_names = [""] + sorted(list(SUPERVISOR_TRADE_MAP.keys()))
+
     with st.form("obs_form", clear_on_submit=True):
-        
         col1, col2 = st.columns(2)
 
         with col1:
             form_date = st.date_input("Date")
-            # --- MODIFIED PART ---
-            # Changed text_input to selectbox
             area = st.selectbox("Area", AREAS)
-            # --- END OF MODIFICATION ---
             observer_name = st.selectbox("Observer Name", OBSERVER_NAMES)
-            discipline = st.text_input("Discipline")
             classification = st.selectbox("Classification", ["POSITIVE", "UNSAFE CONDITION", "UNSAFE ACT"])
-
+            category = st.selectbox("Category", CATEGORIES)
+            
         with col2:
             well_no = st.selectbox("Well No", well_numbers)
-            supervisor_name = st.text_input("Supervisor Name")
-            category = st.text_input("Category")
+            supervisor_name = st.selectbox("Supervisor Name", supervisor_names)
+            trade = SUPERVISOR_TRADE_MAP.get(supervisor_name, "")
+            discipline = st.text_input("Discipline", value=trade, disabled=True)
             status = st.selectbox("Status", ["Open", "Closed"])
         
         obs_details = st.text_area("Observation Details")
@@ -218,7 +291,7 @@ def show_observation_form(sheet):
 
         if st.form_submit_button("Submit"):
             data = [
-                form_date.strftime("%Y-%m-%d"),
+                form_date.strftime("%d-%b-%Y"),
                 well_no,
                 area,
                 observer_name,
@@ -277,7 +350,7 @@ def show_permit_form(sheet):
 
         if st.form_submit_button("Submit"):
             data = [
-                date_val.strftime("%Y-%m-%d"),
+                date_val.strftime("%d-%b-%Y"),
                 drill_site,
                 permit_no,
                 permit_type,
@@ -309,10 +382,11 @@ def show_heavy_vehicle_form(sheet):
 
         st.subheader("Expiry Dates")
         d1, d2 = st.columns(2)
-        mvpi_expiry = d1.date_input("MVPI Expiry date")
-        insurance_expiry = d2.date_input("Insurance Expiry")
-        licence_expiry = d1.date_input("Licence Expiry")
-        fire_ext_tp_expiry = d2.date_input("Fire Extinguisher T.P Expiry")
+        date_format = "%d-%b-%Y"
+        mvpi_expiry = d1.date_input("MVPI Expiry date").strftime(date_format)
+        insurance_expiry = d2.date_input("Insurance Expiry").strftime(date_format)
+        licence_expiry = d1.date_input("Licence Expiry").strftime(date_format)
+        fire_ext_tp_expiry = d2.date_input("Fire Extinguisher T.P Expiry").strftime(date_format)
 
         st.subheader("Condition & Status")
         s1, s2 = st.columns(2)
@@ -327,9 +401,9 @@ def show_heavy_vehicle_form(sheet):
         if st.form_submit_button("Submit"):
             data = [
                 vehicle_type, make, plate_no, asset_code, owner, 
-                mvpi_expiry.strftime("%Y-%m-%d"), insurance_expiry.strftime("%Y-%m-%d"),
-                driver_name, iqama_no, licence_expiry.strftime("%Y-%m-%d"),
-                qr_code, fa_box, fire_ext_tp_expiry.strftime("%Y-%m-%d"),
+                mvpi_expiry, insurance_expiry,
+                driver_name, iqama_no, licence_expiry,
+                qr_code, fa_box, fire_ext_tp_expiry,
                 pwas_status, seatbelt_damaged, tyre_condition,
                 suspension_systems, remarks
             ]
@@ -428,7 +502,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         st.markdown("---")
         st.subheader("Full Permit Log Data")
         df_display_permit = df_permit.copy()
-        df_display_permit['DATE'] = df_display_permit['DATE'].dt.strftime('%Y-%m-%d')
+        df_display_permit['DATE'] = df_display_permit['DATE'].dt.strftime('%d-%b-%Y')
         st.dataframe(df_display_permit, use_container_width=True)
 
     with tab_eqp:
@@ -446,7 +520,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         date_cols = ["T.P Expiry date", "Insurance expiry date", "T.P Card expiry date", "F.E TP expiry"]
         for col in date_cols:
              if col in df_equip.columns:
-                   df_equip[col] = df_equip[col].apply(parse_date)
+                    df_equip[col] = df_equip[col].apply(parse_date)
 
         today = date.today()
         ten_days = today + timedelta(days=10)
@@ -476,8 +550,8 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
 
         for col in date_cols:
              if col in df_equip.columns:
-                   expired_count += df_equip[df_equip[col] < today].shape[0]
-                   expiring_soon_count += df_equip[(df_equip[col] >= today) & (df_equip[col] <= ten_days)].shape[0]
+                    expired_count += df_equip[df_equip[col] < today].shape[0]
+                    expiring_soon_count += df_equip[(df_equip[col] >= today) & (df_equip[col] <= ten_days)].shape[0]
 
         kpi1_eq, kpi2_eq, kpi3_eq = st.columns(3)
         kpi1_eq.metric(label="Total Equipment", value=total_equipment)
@@ -523,7 +597,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         df_display_eq = df_equip.copy()
         for col in date_cols:
              if col in df_display_eq.columns:
-                   df_display_eq[col] = df_display_eq[col].apply(badge_expiry, expiry_days=10)
+                    df_display_eq[col] = df_display_eq[col].apply(badge_expiry, expiry_days=10)
         
         st.dataframe(df_display_eq, use_container_width=True)
 
