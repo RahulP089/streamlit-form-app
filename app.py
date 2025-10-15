@@ -520,14 +520,14 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         col_viz1, col_viz2 = st.columns(2)
 
         with col_viz1:
-            st.write("**Permits Issued Over Time**")
-            permits_by_day = df_filtered.groupby(df_filtered['DATE'].dt.date).size().reset_index(name='count')
-            fig_time = px.line(
-                permits_by_day, x='DATE', y='count', markers=True,
-                labels={'DATE': 'Date', 'count': 'Number of Permits'}
-            )
-            fig_time.update_layout(margin=dict(l=20, r=20, t=30, b=20))
-            st.plotly_chart(fig_time, use_container_width=True)
+            if 'TYPE OF PERMIT' in df_filtered.columns:
+                st.write("**Permit Type Distribution**")
+                fig_type_pie = px.pie(
+                    df_filtered, names='TYPE OF PERMIT', hole=0.4,
+                )
+                fig_type_pie.update_traces(textposition='inside', textinfo='percent+label')
+                fig_type_pie.update_layout(showlegend=False, margin=dict(l=10, r=10, t=30, b=10))
+                st.plotly_chart(fig_type_pie, use_container_width=True)
 
             if 'DRILL SITE' in df_filtered.columns:
                 st.write("**Permits by Drill Site**")
@@ -539,15 +539,21 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 fig_site.update_layout(margin=dict(l=20, r=20, t=30, b=20))
                 st.plotly_chart(fig_site, use_container_width=True)
 
+
         with col_viz2:
-            if 'TYPE OF PERMIT' in df_filtered.columns:
-                st.write("**Permit Type Distribution**")
-                fig_type_pie = px.pie(
-                    df_filtered, names='TYPE OF PERMIT', hole=0.4,
+            # ✨ CHANGED: Replaced pie chart with a bar chart for better comparison
+            if 'PERMIT ISSUER' in df_filtered.columns:
+                st.write("**Permit Count by Issuer**")
+                issuer_counts = df_filtered['PERMIT ISSUER'].value_counts().reset_index()
+                fig_issuer_bar = px.bar(
+                    issuer_counts,
+                    x='PERMIT ISSUER',
+                    y='count',
+                    text_auto=True,
+                    labels={'count': 'Number of Permits', 'PERMIT ISSUER': 'Issuer Name'}
                 )
-                fig_type_pie.update_traces(textposition='inside', textinfo='percent+label')
-                fig_type_pie.update_layout(showlegend=False, margin=dict(l=20, r=20, t=30, b=20))
-                st.plotly_chart(fig_type_pie, use_container_width=True)
+                fig_issuer_bar.update_layout(margin=dict(l=20, r=20, t=30, b=20))
+                st.plotly_chart(fig_issuer_bar, use_container_width=True)
 
             if 'PERMIT RECEIVER' in df_filtered.columns:
                 st.write("**Top 10 Permit Receivers**")
@@ -558,6 +564,17 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 )
                 fig_receiver.update_layout(yaxis={'categoryorder':'total ascending'}, margin=dict(l=20, r=20, t=30, b=20))
                 st.plotly_chart(fig_receiver, use_container_width=True)
+                
+        # --- Time Series Analysis ---
+        st.markdown("---")
+        st.write("#### Permit Trend Over Time")
+        permits_by_day = df_filtered.groupby(df_filtered['DATE'].dt.date).size().reset_index(name='count')
+        fig_time = px.line(
+            permits_by_day, x='DATE', y='count', markers=True,
+            labels={'DATE': 'Date', 'count': 'Number of Permits'}
+        )
+        fig_time.update_layout(margin=dict(l=20, r=20, t=30, b=20))
+        st.plotly_chart(fig_time, use_container_width=True)
 
         # --- Full Data Table ---
         st.markdown("---")
