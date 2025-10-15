@@ -355,16 +355,16 @@ def show_permit_form(sheet):
         activity = st.text_area("Activity")
 
         if st.form_submit_button("Submit"):
-            # ✨ CORRECTED: Data order changed to place Work Location after Drill Site
+            # ✨ CORRECTED: Data order matches the requested sheet structure exactly.
             data = [
-                date_val.strftime("%d-%b-%Y"),
-                drill_site,
-                work_location, # Moved to be the 3rd item
-                permit_no,
-                permit_type,
-                activity,
-                permit_receiver,
-                permit_issuer
+                date_val.strftime("%d-%b-%Y"), # Column A: DATE
+                drill_site,                    # Column B: DRILL SITE
+                work_location,                 # Column C: WORK LOCATION
+                permit_no,                     # Column D: PERMIT NO
+                permit_type,                   # Column E: TYPE OF PERMIT
+                activity,                      # Column F: ACTIVITY
+                permit_receiver,               # Column G: PERMIT RECEIVER
+                permit_issuer                  # Column H: PERMIT ISSUER
             ]
             try:
                 sheet.append_row(data)
