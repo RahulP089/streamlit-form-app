@@ -1,8 +1,3 @@
-Of course. Here is the full code with the observer names sorted alphabetically and implemented as a dropdown menu in the observation form.
-
-I have replaced the line `observer_name = st.text_input("Observer Name")` with a sorted list and a `st.selectbox` to allow users to choose from the list.
-
-```python
 import streamlit as st
 import pandas as pd
 import gspread
@@ -570,3 +565,4 @@ def main():
 if __name__ == "__main__":
     main()
 ```
+
