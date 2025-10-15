@@ -180,9 +180,11 @@ def show_equipment_form(sheet):
             except Exception as e:
                 st.error(f"❌ Error submitting data: {e}")
 
+#--------------------------------------------------------------- HSE OBSERVATION FORM-----------------------------------------------------------------------------------------------
+-
 def show_observation_form(sheet):
     st.header("📋 Daily HSE Site Observation Entry Form")
-    well_numbers = ["2534", "2556", "1858", "2433", "2553", "2447","2485","1969"]
+    well_numbers = ["2549","2534", "2556", "1858", "2433", "2553", "2447","2485","1969"]
     
     OBSERVER_NAMES = [
         "Ajish", "Akhil Mohan", "Aqib", "Arfan", "Asim", "Ashraf Khan", "Bijo",
@@ -640,5 +642,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
