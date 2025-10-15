@@ -314,7 +314,6 @@ def show_permit_form(sheet):
     st.header("🛠️ Daily Internal Permit Log")
     
     DRILL_SITES = ["2485", "2566", "2534", "1969", "2549", "1972"]
-    # ✨ NEW: Added Work Locations list
     WORK_LOCATIONS = [
         "Well Head", "OHPL", "E&I Skid", "Burn Pit", "Cellar",
         "Flow Line", "Lay down", "CP area"
@@ -340,34 +339,33 @@ def show_permit_form(sheet):
     ]
 
     with st.form("permit_form", clear_on_submit=True):
-        # ✨ MODIFIED: Changed layout for better organization
         col1, col2 = st.columns(2)
         
         with col1:
             date_val = st.date_input("Date")
             drill_site = st.selectbox("Drill Site", DRILL_SITES)
-            permit_type = st.selectbox("Type of Permit", PERMIT_TYPES)
+            # ✨ CORRECTED: Placed Work Location here for better UI
+            work_location = st.selectbox("Work Location", WORK_LOCATIONS)
             permit_receiver = st.selectbox("Permit Receiver", PERMIT_RECEIVERS)
 
         with col2:
             permit_no = st.text_input("Permit No")
-            # ✨ NEW: Added Work Location selectbox
-            work_location = st.selectbox("Work Location", WORK_LOCATIONS)
+            permit_type = st.selectbox("Type of Permit", PERMIT_TYPES)
             permit_issuer = st.selectbox("Permit Issuer", PERMIT_ISSUERS)
 
         activity = st.text_area("Activity")
 
         if st.form_submit_button("Submit"):
-            # ✨ MODIFIED: Added work_location to the data list
+            # ✨ CORRECTED: Data order matches original sheet + new column at the end to prevent shifting
             data = [
                 date_val.strftime("%d-%b-%Y"),
                 drill_site,
-                work_location, # New field added
                 permit_no,
                 permit_type,
                 activity,
                 permit_receiver,
-                permit_issuer
+                permit_issuer,
+                work_location  # New field moved to the end
             ]
             try:
                 sheet.append_row(data)
