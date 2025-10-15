@@ -358,13 +358,13 @@ def show_permit_form(sheet):
             # ✨ CORRECTED: Data order matches the requested sheet structure exactly.
             data = [
                 date_val.strftime("%d-%b-%Y"), # Column A: DATE
-                drill_site,                    # Column B: DRILL SITE
-                work_location,                 # Column C: WORK LOCATION
-                permit_no,                     # Column D: PERMIT NO
-                permit_type,                   # Column E: TYPE OF PERMIT
-                activity,                      # Column F: ACTIVITY
-                permit_receiver,               # Column G: PERMIT RECEIVER
-                permit_issuer                  # Column H: PERMIT ISSUER
+                drill_site,                   # Column B: DRILL SITE
+                work_location,                # Column C: WORK LOCATION
+                permit_no,                    # Column D: PERMIT NO
+                permit_type,                  # Column E: TYPE OF PERMIT
+                activity,                     # Column F: ACTIVITY
+                permit_receiver,              # Column G: PERMIT RECEIVER
+                permit_issuer                 # Column H: PERMIT ISSUER
             ]
             try:
                 sheet.append_row(data)
@@ -430,87 +430,139 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
     ])
 
     with tab_permit:
-        st.subheader("Permit Log Analytics")
+        st.subheader("Advanced Permit Log Analytics")
         try:
             df_permit = pd.DataFrame(permit_sheet.get_all_records())
-            df_permit.columns = [col.upper() for col in df_permit.columns]
+            # Ensure column names are consistent and uppercase for easier access
+            df_permit.columns = [str(col).strip().upper() for col in df_permit.columns]
         except gspread.exceptions.GSpreadException as e:
             st.error(f"Could not load permit data from Google Sheets: {e}")
             return
-        
+
         if df_permit.empty:
             st.info("No permit data available to display.")
             return
 
-        if 'DATE' in df_permit.columns:
-            df_permit['DATE'] = pd.to_datetime(df_permit['DATE'], errors='coerce')
-            df_permit.dropna(subset=['DATE'], inplace=True)
-        else:
+        # --- Data Cleaning and Preparation ---
+        if 'DATE' not in df_permit.columns:
             st.warning("The 'DATE' column is missing from the Permit Log sheet.")
             return
 
-        total_permits = len(df_permit)
-        today_date = pd.to_datetime(date.today())
-        permits_today = df_permit[df_permit['DATE'].dt.date == today_date.date()].shape[0]
-        most_common_type = "N/A"
-        if 'TYPE OF PERMIT' in df_permit.columns and not df_permit['TYPE OF PERMIT'].empty:
-            most_common_type = df_permit['TYPE OF PERMIT'].mode()[0]
+        df_permit['DATE'] = pd.to_datetime(df_permit['DATE'], errors='coerce')
+        df_permit.dropna(subset=['DATE'], inplace=True)
+        df_permit = df_permit.sort_values(by='DATE', ascending=False)
 
-        kpi1, kpi2, kpi3 = st.columns(3)
-        kpi1.metric(label="Total Permits Issued", value=total_permits)
-        kpi2.metric(label="Permits Issued Today", value=permits_today)
-        kpi3.metric(label="Most Common Type", value=most_common_type)
+        # --- Interactive Filters ---
+        st.markdown("#### Filter & Explore")
+        with st.expander("Adjust Filters", expanded=True):
+            col_filter1, col_filter2 = st.columns(2)
+
+            with col_filter1:
+                min_date = df_permit['DATE'].min().date()
+                max_date = df_permit['DATE'].max().date()
+                date_range = st.date_input(
+                    "Select Date Range",
+                    (min_date, max_date),
+                    min_value=min_date,
+                    max_value=max_date,
+                    key="permit_date_range"
+                )
+
+            with col_filter2:
+                # Check if columns exist before creating filters
+                permit_types = df_permit['TYPE OF PERMIT'].unique() if 'TYPE OF PERMIT' in df_permit.columns else []
+                selected_types = st.multiselect("Filter by Permit Type", options=permit_types, default=permit_types)
+
+                issuers = df_permit['PERMIT ISSUER'].unique() if 'PERMIT ISSUER' in df_permit.columns else []
+                selected_issuers = st.multiselect("Filter by Permit Issuer", options=issuers, default=issuers)
+
+        # --- Apply Filters to DataFrame ---
+        # Handle date range selection for filtering
+        start_date, end_date = date_range if len(date_range) == 2 else (min_date, max_date)
+        start_datetime = pd.to_datetime(start_date)
+        end_datetime = pd.to_datetime(end_date)
+
+        # Create a boolean mask for each filter
+        mask = (df_permit['DATE'] >= start_datetime) & (df_permit['DATE'] <= end_datetime)
+        if selected_types and 'TYPE OF PERMIT' in df_permit.columns:
+            mask &= df_permit['TYPE OF PERMIT'].isin(selected_types)
+        if selected_issuers and 'PERMIT ISSUER' in df_permit.columns:
+            mask &= df_permit['PERMIT ISSUER'].isin(selected_issuers)
+
+        df_filtered = df_permit[mask]
+
+        if df_filtered.empty:
+            st.warning("No data matches the selected filters.")
+            return
+
+        # --- High-Level KPIs ---
+        st.markdown("---")
+        st.markdown("#### Key Metrics Overview")
+
+        total_permits = len(df_filtered)
+        hot_permits_count = 0
+        if 'TYPE OF PERMIT' in df_filtered.columns:
+            hot_permits_count = df_filtered[df_filtered['TYPE OF PERMIT'].str.contains("Hot", case=False)].shape[0]
+
+        hot_permits_perc = (hot_permits_count / total_permits * 100) if total_permits > 0 else 0
+        busiest_day = df_filtered['DATE'].dt.day_name().mode()[0] if not df_filtered.empty else "N/A"
+        active_receivers = df_filtered['PERMIT RECEIVER'].nunique() if 'PERMIT RECEIVER' in df_filtered.columns else 0
+
+        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+        kpi1.metric("Total Permits (in range)", f"{total_permits}")
+        kpi2.metric("Hot Permits %", f"{hot_permits_perc:.1f}%")
+        kpi3.metric("Busiest Day", busiest_day)
+        kpi4.metric("Active Permit Receivers", f"{active_receivers}")
         st.markdown("---")
 
-        st.subheader("Permit Distribution")
-        col1, col2 = st.columns(2)
-        with col1:
-            if 'TYPE OF PERMIT' in df_permit.columns:
-                fig_type = px.bar(
-                    df_permit['TYPE OF PERMIT'].value_counts().reset_index(),
-                    x='TYPE OF PERMIT', y='count', title='Permits by Type',
-                    labels={'count': 'Count', 'TYPE OF PERMIT': 'Permit Type'},
-                    text_auto=True
-                )
-                st.plotly_chart(fig_type, use_container_width=True)
-        
-        with col2:
-            if 'PERMIT ISSUER' in df_permit.columns:
-                fig_issuer = px.bar(
-                    df_permit['PERMIT ISSUER'].value_counts().reset_index(),
-                    x='PERMIT ISSUER', y='count', title='Permits by Issuer',
-                    labels={'count': 'Count', 'PERMIT ISSUER': 'Issuer Name'},
-                    text_auto=True
-                )
-                st.plotly_chart(fig_issuer, use_container_width=True)
-        
-        col3, col4 = st.columns(2)
-        with col3:
-            if 'PERMIT RECEIVER' in df_permit.columns:
-                receiver_counts = df_permit['PERMIT RECEIVER'].value_counts().nlargest(10).reset_index()
-                fig_receiver = px.bar(
-                    receiver_counts,
-                    x='PERMIT RECEIVER', y='count', title='Top 10 Permit Receivers',
-                    labels={'count': 'Count', 'PERMIT RECEIVER': 'Receiver Name'},
-                    text_auto=True
-                )
-                fig_receiver.update_layout(xaxis_tickangle=-45)
-                st.plotly_chart(fig_receiver, use_container_width=True)
-        
-        with col4:
-            if 'DRILL SITE' in df_permit.columns:
-                site_counts = df_permit['DRILL SITE'].value_counts().reset_index()
+        # --- Visualizations ---
+        st.markdown("#### Visual Insights")
+        col_viz1, col_viz2 = st.columns(2)
+
+        with col_viz1:
+            st.write("**Permits Issued Over Time**")
+            permits_by_day = df_filtered.groupby(df_filtered['DATE'].dt.date).size().reset_index(name='count')
+            fig_time = px.line(
+                permits_by_day, x='DATE', y='count', markers=True,
+                labels={'DATE': 'Date', 'count': 'Number of Permits'}
+            )
+            fig_time.update_layout(margin=dict(l=20, r=20, t=30, b=20))
+            st.plotly_chart(fig_time, use_container_width=True)
+
+            if 'DRILL SITE' in df_filtered.columns:
+                st.write("**Permits by Drill Site**")
+                site_counts = df_filtered['DRILL SITE'].value_counts().reset_index()
                 fig_site = px.bar(
-                    site_counts,
-                    x='DRILL SITE', y='count', title='Permits by Drill Site',
-                    labels={'count': 'Count', 'DRILL SITE': 'Drill Site'},
-                    text_auto=True
+                    site_counts, x='DRILL SITE', y='count', text_auto=True,
+                    labels={'count': 'Count', 'DRILL SITE': 'Drill Site'}
                 )
+                fig_site.update_layout(margin=dict(l=20, r=20, t=30, b=20))
                 st.plotly_chart(fig_site, use_container_width=True)
 
+        with col_viz2:
+            if 'TYPE OF PERMIT' in df_filtered.columns:
+                st.write("**Permit Type Distribution**")
+                fig_type_pie = px.pie(
+                    df_filtered, names='TYPE OF PERMIT', hole=0.4,
+                )
+                fig_type_pie.update_traces(textposition='inside', textinfo='percent+label')
+                fig_type_pie.update_layout(showlegend=False, margin=dict(l=20, r=20, t=30, b=20))
+                st.plotly_chart(fig_type_pie, use_container_width=True)
+
+            if 'PERMIT RECEIVER' in df_filtered.columns:
+                st.write("**Top 10 Permit Receivers**")
+                receiver_counts = df_filtered['PERMIT RECEIVER'].value_counts().nlargest(10).reset_index()
+                fig_receiver = px.bar(
+                    receiver_counts, y='PERMIT RECEIVER', x='count', orientation='h', text_auto=True,
+                    labels={'count': 'Count', 'PERMIT RECEIVER': 'Receiver Name'}
+                )
+                fig_receiver.update_layout(yaxis={'categoryorder':'total ascending'}, margin=dict(l=20, r=20, t=30, b=20))
+                st.plotly_chart(fig_receiver, use_container_width=True)
+
+        # --- Full Data Table ---
         st.markdown("---")
-        st.subheader("Full Permit Log Data")
-        df_display_permit = df_permit.copy()
+        st.markdown("#### Detailed Permit Log (Filtered)")
+        df_display_permit = df_filtered.copy()
         df_display_permit['DATE'] = df_display_permit['DATE'].dt.strftime('%d-%b-%Y')
         st.dataframe(df_display_permit, use_container_width=True)
 
@@ -528,7 +580,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
 
         date_cols = ["T.P Expiry date", "Insurance expiry date", "T.P Card expiry date", "F.E TP expiry"]
         for col in date_cols:
-             if col in df_equip.columns:
+              if col in df_equip.columns:
                     df_equip[col] = df_equip[col].apply(parse_date)
 
         today = date.today()
@@ -558,7 +610,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         expiring_soon_count = 0
 
         for col in date_cols:
-             if col in df_equip.columns:
+              if col in df_equip.columns:
                     expired_count += df_equip[df_equip[col] < today].shape[0]
                     expiring_soon_count += df_equip[(df_equip[col] >= today) & (df_equip[col] <= ten_days)].shape[0]
 
@@ -605,7 +657,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         st.subheader("Full Heavy Equipment Data")
         df_display_eq = df_equip.copy()
         for col in date_cols:
-             if col in df_display_eq.columns:
+              if col in df_display_eq.columns:
                     df_display_eq[col] = df_display_eq[col].apply(badge_expiry, expiry_days=10)
         
         st.dataframe(df_display_eq, use_container_width=True)
