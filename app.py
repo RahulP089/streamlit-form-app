@@ -1,3 +1,8 @@
+Of course. Here is the full code with the observer names sorted alphabetically and implemented as a dropdown menu in the observation form.
+
+I have replaced the line `observer_name = st.text_input("Observer Name")` with a sorted list and a `st.selectbox` to allow users to choose from the list.
+
+```python
 import streamlit as st
 import pandas as pd
 import gspread
@@ -178,6 +183,17 @@ def show_equipment_form(sheet):
 def show_observation_form(sheet):
     st.header("📋 Daily HSE Site Observation Entry Form")
     well_numbers = ["2334", "2556", "1858", "2433", "2553", "2447"]
+    
+    # --- MODIFIED PART ---
+    # List of observers sorted alphabetically
+    OBSERVER_NAMES = [
+        "Ajish", "Akhil Mohan", "Aqib", "Arfan", "Asim", "Ashraf Khan", "Bijo",
+        "Felin", "Habeeb", "Ilyas", "Irfan", "Jamali", "Joseph Cruz", "Mohsin",
+        "Pradeep", "Rajshekar", "Ricken", "Shiva Kannan", "Shiva Subramaniyam",
+        "Sudheesh", "Vaishak", "Vargheese", "Wali Alam", "Zaheer"
+    ]
+    # --- END OF MODIFICATION ---
+
     with st.form("obs_form", clear_on_submit=True):
         
         col1, col2 = st.columns(2)
@@ -185,7 +201,10 @@ def show_observation_form(sheet):
         with col1:
             form_date = st.date_input("Date")
             area = st.text_input("Area")
-            observer_name = st.text_input("Observer Name")
+            # --- MODIFIED PART ---
+            # Replaced text_input with selectbox
+            observer_name = st.selectbox("Observer Name", OBSERVER_NAMES)
+            # --- END OF MODIFICATION ---
             discipline = st.text_input("Discipline")
             classification = st.selectbox("Classification", ["POSITIVE", "UNSAFE CONDITION", "UNSAFE ACT"])
 
@@ -430,7 +449,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         date_cols = ["T.P Expiry date", "Insurance expiry date", "T.P Card expiry date", "F.E TP expiry"]
         for col in date_cols:
              if col in df_equip.columns:
-                 df_equip[col] = df_equip[col].apply(parse_date)
+                   df_equip[col] = df_equip[col].apply(parse_date)
 
         today = date.today()
         ten_days = today + timedelta(days=10)
@@ -460,8 +479,8 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
 
         for col in date_cols:
              if col in df_equip.columns:
-                 expired_count += df_equip[df_equip[col] < today].shape[0]
-                 expiring_soon_count += df_equip[(df_equip[col] >= today) & (df_equip[col] <= ten_days)].shape[0]
+                   expired_count += df_equip[df_equip[col] < today].shape[0]
+                   expiring_soon_count += df_equip[(df_equip[col] >= today) & (df_equip[col] <= ten_days)].shape[0]
 
         kpi1_eq, kpi2_eq, kpi3_eq = st.columns(3)
         kpi1_eq.metric(label="Total Equipment", value=total_equipment)
@@ -507,7 +526,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         df_display_eq = df_equip.copy()
         for col in date_cols:
              if col in df_display_eq.columns:
-                 df_display_eq[col] = df_display_eq[col].apply(badge_expiry, expiry_days=10)
+                   df_display_eq[col] = df_display_eq[col].apply(badge_expiry, expiry_days=10)
         
         st.dataframe(df_display_eq, use_container_width=True)
 
@@ -550,3 +569,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+```
