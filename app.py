@@ -344,7 +344,6 @@ def show_permit_form(sheet):
         with col1:
             date_val = st.date_input("Date")
             drill_site = st.selectbox("Drill Site", DRILL_SITES)
-            # ✨ CORRECTED: Placed Work Location here for better UI
             work_location = st.selectbox("Work Location", WORK_LOCATIONS)
             permit_receiver = st.selectbox("Permit Receiver", PERMIT_RECEIVERS)
 
@@ -356,16 +355,16 @@ def show_permit_form(sheet):
         activity = st.text_area("Activity")
 
         if st.form_submit_button("Submit"):
-            # ✨ CORRECTED: Data order matches original sheet + new column at the end to prevent shifting
+            # ✨ CORRECTED: Data order changed to place Work Location after Drill Site
             data = [
                 date_val.strftime("%d-%b-%Y"),
                 drill_site,
+                work_location, # Moved to be the 3rd item
                 permit_no,
                 permit_type,
                 activity,
                 permit_receiver,
-                permit_issuer,
-                work_location  # New field moved to the end
+                permit_issuer
             ]
             try:
                 sheet.append_row(data)
