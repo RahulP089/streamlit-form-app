@@ -161,7 +161,7 @@ def show_equipment_form(sheet):
 
         st.subheader("T.P Card & Status")
         cols_status = st.columns(2)
-        tp_card_type = cols_status[0].selectbox("T.P Card Type", ["SPSP", "Aramco", "PAX", "N/A"])
+        tp_card_type = cols_status[0].selectbox("T.P Card Type", ["SPSP", "Aramco", "PAX", "Bureau Veritas"])
         tp_card_number = cols_status[1].text_input("T.P Card Number")
         pwas_status = cols_status[0].selectbox("PWAS Status", ["Working", "Not Working", "Alarm Not Audible", "Faulty Camera/Monitor", "N/A"])
         fa_box_status = cols_status[1].text_input("FA box Status")
@@ -731,3 +731,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
