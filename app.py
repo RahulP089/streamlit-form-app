@@ -68,10 +68,11 @@ def get_sheets():
                 ws.append_row(headers)
         return ws
     
+    # ✨ CHANGE: Removed 'F.E TP expiry' from the headers list
     heavy_equip_headers = [
         "Equipment type", "Make", "Palte No.", "Asset code", "Owner", "T.P inspection date", "T.P Expiry date",
         "Insurance expiry date", "Operator Name", "Iqama NO", "T.P Card type", "T.P Card Number",
-        "T.P Card expiry date", "Q.R code", "PWAS status", "F.E TP expiry",
+        "T.P Card expiry date", "Q.R code", "PWAS status", 
         "FA box Status", "Documents"
     ]
 
@@ -156,8 +157,8 @@ def show_equipment_form(sheet):
         tp_insp_date = cols_dates[0].date_input("T.P inspection date").strftime(date_format)
         tp_expiry = cols_dates[1].date_input("T.P Expiry date").strftime(date_format)
         insurance_expiry = cols_dates[0].date_input("Insurance expiry date").strftime(date_format)
-        fe_tp_expiry = cols_dates[1].date_input("F.E TP expiry").strftime(date_format)
-        tp_card_expiry = cols_dates[0].date_input("T.P Card expiry date").strftime(date_format)
+        # ✨ CHANGE: Removed the input field for 'F.E TP expiry'
+        tp_card_expiry = cols_dates[1].date_input("T.P Card expiry date").strftime(date_format)
 
         st.subheader("T.P Card & Status")
         cols_status = st.columns(2)
@@ -169,10 +170,11 @@ def show_equipment_form(sheet):
         documents = cols_status[1].text_input("Documents")
 
         if st.form_submit_button("Submit", use_container_width=True):
+            # ✨ CHANGE: Removed the variable for 'F.E TP expiry' from the data list
             data = [
                 equipment_type, make, plate_no, asset_code, owner, tp_insp_date, tp_expiry,
                 insurance_expiry, operator_name, iqama_no, tp_card_type, tp_card_number,
-                tp_card_expiry, qr_code, pwas_status, fe_tp_expiry, fa_box_status, documents
+                tp_card_expiry, qr_code, pwas_status, fa_box_status, documents
             ]
             try:
                 sheet.append_row(data)
@@ -355,7 +357,6 @@ def show_permit_form(sheet):
         activity = st.text_area("Activity")
 
         if st.form_submit_button("Submit"):
-            # ✨ CORRECTED: Data order matches the requested sheet structure exactly.
             data = [
                 date_val.strftime("%d-%b-%Y"), # Column A: DATE
                 drill_site,                   # Column B: DRILL SITE
@@ -433,7 +434,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         st.subheader("Advanced Permit Log Analytics")
         try:
             df_permit = pd.DataFrame(permit_sheet.get_all_records())
-            # Ensure column names are consistent and uppercase for easier access
             df_permit.columns = [str(col).strip().upper() for col in df_permit.columns]
         except gspread.exceptions.GSpreadException as e:
             st.error(f"Could not load permit data from Google Sheets: {e}")
@@ -443,7 +443,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             st.info("No permit data available to display.")
             return
 
-        # --- Data Cleaning and Preparation ---
         if 'DATE' not in df_permit.columns:
             st.warning("The 'DATE' column is missing from the Permit Log sheet.")
             return
@@ -452,7 +451,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         df_permit.dropna(subset=['DATE'], inplace=True)
         df_permit = df_permit.sort_values(by='DATE', ascending=False)
 
-        # --- Interactive Filters ---
         st.markdown("#### Filter & Explore")
         with st.expander("Adjust Filters", expanded=True):
             col_filter1, col_filter2 = st.columns(2)
@@ -469,20 +467,16 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 )
 
             with col_filter2:
-                # Check if columns exist before creating filters
                 permit_types = df_permit['TYPE OF PERMIT'].unique() if 'TYPE OF PERMIT' in df_permit.columns else []
                 selected_types = st.multiselect("Filter by Permit Type", options=permit_types, default=permit_types)
 
                 issuers = df_permit['PERMIT ISSUER'].unique() if 'PERMIT ISSUER' in df_permit.columns else []
                 selected_issuers = st.multiselect("Filter by Permit Issuer", options=issuers, default=issuers)
 
-        # --- Apply Filters to DataFrame ---
-        # Handle date range selection for filtering
         start_date, end_date = date_range if len(date_range) == 2 else (min_date, max_date)
         start_datetime = pd.to_datetime(start_date)
         end_datetime = pd.to_datetime(end_date)
 
-        # Create a boolean mask for each filter
         mask = (df_permit['DATE'] >= start_datetime) & (df_permit['DATE'] <= end_datetime)
         if selected_types and 'TYPE OF PERMIT' in df_permit.columns:
             mask &= df_permit['TYPE OF PERMIT'].isin(selected_types)
@@ -495,7 +489,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             st.warning("No data matches the selected filters.")
             return
 
-        # --- High-Level KPIs ---
         st.markdown("---")
         st.markdown("#### Key Metrics Overview")
 
@@ -515,7 +508,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         kpi4.metric("Active Permit Receivers", f"{active_receivers}")
         st.markdown("---")
 
-        # --- Visualizations ---
         st.markdown("#### Visual Insights")
         col_viz1, col_viz2 = st.columns(2)
 
@@ -523,19 +515,11 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             if 'TYPE OF PERMIT' in df_filtered.columns:
                 st.write("**Permit Type Distribution**")
                 
-                permit_color_map = {
-                    'Hot': 'red',
-                    'Cold': 'lightblue',
-                    'EOLB': 'lightpink',
-                    'CSE': 'lightgray' 
-                }
+                permit_color_map = {'Hot': 'red', 'Cold': 'lightblue', 'EOLB': 'lightpink', 'CSE': 'lightgray' }
                 
                 fig_type_pie = px.pie(
-                    df_filtered, 
-                    names='TYPE OF PERMIT', 
-                    hole=0.4,
-                    color='TYPE OF PERMIT',
-                    color_discrete_map=permit_color_map
+                    df_filtered, names='TYPE OF PERMIT', hole=0.4,
+                    color='TYPE OF PERMIT', color_discrete_map=permit_color_map
                 )
                 fig_type_pie.update_traces(textposition='inside', textinfo='percent+label')
                 fig_type_pie.update_layout(showlegend=False, margin=dict(l=10, r=10, t=30, b=10))
@@ -551,16 +535,12 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 fig_site.update_layout(margin=dict(l=20, r=20, t=30, b=20))
                 st.plotly_chart(fig_site, use_container_width=True)
 
-
         with col_viz2:
             if 'PERMIT ISSUER' in df_filtered.columns:
                 st.write("**Permit Count by Issuer**")
                 issuer_counts = df_filtered['PERMIT ISSUER'].value_counts().reset_index()
                 fig_issuer_bar = px.bar(
-                    issuer_counts,
-                    x='PERMIT ISSUER',
-                    y='count',
-                    text_auto=True,
+                    issuer_counts, x='PERMIT ISSUER', y='count', text_auto=True,
                     labels={'count': 'Number of Permits', 'PERMIT ISSUER': 'Issuer Name'}
                 )
                 fig_issuer_bar.update_layout(margin=dict(l=20, r=20, t=30, b=20))
@@ -576,7 +556,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 fig_receiver.update_layout(yaxis={'categoryorder':'total ascending'}, margin=dict(l=20, r=20, t=30, b=20))
                 st.plotly_chart(fig_receiver, use_container_width=True)
                 
-        # --- Time Series Analysis ---
         st.markdown("---")
         st.write("#### Permit Trend Over Time")
         permits_by_day = df_filtered.groupby(df_filtered['DATE'].dt.date).size().reset_index(name='count')
@@ -587,7 +566,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         fig_time.update_layout(margin=dict(l=20, r=20, t=30, b=20))
         st.plotly_chart(fig_time, use_container_width=True)
 
-        # --- Full Data Table ---
         st.markdown("---")
         st.markdown("#### Detailed Permit Log (Filtered)")
         df_display_permit = df_filtered.copy()
@@ -606,7 +584,8 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             st.info("No Heavy Equipment data available to display.")
             return
 
-        date_cols = ["T.P Expiry date", "Insurance expiry date", "T.P Card expiry date", "F.E TP expiry"]
+        # ✨ CHANGE: Removed 'F.E TP expiry' from the list of date columns to process
+        date_cols = ["T.P Expiry date", "Insurance expiry date", "T.P Card expiry date"]
         for col in date_cols:
              if col in df_equip.columns:
                     df_equip[col] = df_equip[col].apply(parse_date)
@@ -614,7 +593,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         today = date.today()
         ten_days = today + timedelta(days=10)
         
-        # --- T.P. CARD EXPIRY ALERTS ---
         st.subheader("🚨 T.P Card Expiry Alerts")
         tp_card_col = "T.P Card expiry date"
         tp_required_cols = ["Equipment type", "Palte No.", "Owner", tp_card_col]
@@ -634,17 +612,14 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         
         st.markdown("---")
 
-        # --- ✨ NEW: EXPIRING SOON ALERTS (25 DAYS) ---
         st.subheader("⚠️ Expiring Soon Alerts (Next 25 Days)")
         twenty_five_days = today + timedelta(days=25)
         expiring_soon_records = []
 
-        # Iterate through each row and check all date columns
         for index, row in df_equip.iterrows():
-            for col in date_cols:
+            for col in date_cols: # This loop now uses the updated date_cols list
                 if col in row and pd.notna(row[col]):
                     expiry_date = row[col]
-                    # Check if the date is between today and 25 days from now
                     if today < expiry_date <= twenty_five_days:
                         expiring_soon_records.append({
                             "Equipment type": row.get("Equipment type", "N/A"),
@@ -662,7 +637,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
 
         st.markdown("---")
 
-        # --- KPIs ---
         total_equipment = len(df_equip)
         expired_count = 0
         expiring_soon_count = 0
@@ -679,7 +653,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
 
         st.markdown("---")
         
-        # --- VISUALIZATIONS ---
         st.subheader("Visual Insights")
         c1_eq, c2_eq = st.columns(2)
 
@@ -713,7 +686,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         
         st.markdown("---")
         
-        # --- FULL DATA TABLE ---
         st.subheader("Full Heavy Equipment Data")
         df_display_eq = df_equip.copy()
         for col in date_cols:
