@@ -523,20 +523,19 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             if 'TYPE OF PERMIT' in df_filtered.columns:
                 st.write("**Permit Type Distribution**")
                 
-                # ✨ CHANGE: Define the color map for the pie chart as requested
                 permit_color_map = {
                     'Hot': 'red',
                     'Cold': 'lightblue',
                     'EOLB': 'lightpink',
-                    'CSE': 'lightgray' # A sensible default for other types
+                    'CSE': 'lightgray' 
                 }
                 
                 fig_type_pie = px.pie(
                     df_filtered, 
                     names='TYPE OF PERMIT', 
                     hole=0.4,
-                    color='TYPE OF PERMIT', # Specify the column for coloring
-                    color_discrete_map=permit_color_map # Apply the custom colors
+                    color='TYPE OF PERMIT',
+                    color_discrete_map=permit_color_map
                 )
                 fig_type_pie.update_traces(textposition='inside', textinfo='percent+label')
                 fig_type_pie.update_layout(showlegend=False, margin=dict(l=10, r=10, t=30, b=10))
@@ -554,7 +553,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
 
 
         with col_viz2:
-            # ✨ CHANGED: Replaced pie chart with a bar chart for better comparison
             if 'PERMIT ISSUER' in df_filtered.columns:
                 st.write("**Permit Count by Issuer**")
                 issuer_counts = df_filtered['PERMIT ISSUER'].value_counts().reset_index()
@@ -615,7 +613,8 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
 
         today = date.today()
         ten_days = today + timedelta(days=10)
-
+        
+        # --- T.P. CARD EXPIRY ALERTS ---
         st.subheader("🚨 T.P Card Expiry Alerts")
         tp_card_col = "T.P Card expiry date"
         tp_required_cols = ["Equipment type", "Palte No.", "Owner", tp_card_col]
@@ -635,6 +634,35 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         
         st.markdown("---")
 
+        # --- ✨ NEW: EXPIRING SOON ALERTS (25 DAYS) ---
+        st.subheader("⚠️ Expiring Soon Alerts (Next 25 Days)")
+        twenty_five_days = today + timedelta(days=25)
+        expiring_soon_records = []
+
+        # Iterate through each row and check all date columns
+        for index, row in df_equip.iterrows():
+            for col in date_cols:
+                if col in row and pd.notna(row[col]):
+                    expiry_date = row[col]
+                    # Check if the date is between today and 25 days from now
+                    if today < expiry_date <= twenty_five_days:
+                        expiring_soon_records.append({
+                            "Equipment type": row.get("Equipment type", "N/A"),
+                            "Palte No.": row.get("Palte No.", "N/A"),
+                            "Owner": row.get("Owner", "N/A"),
+                            "Item Expiring": col.replace("_", " ").title(),
+                            "Expiry Date": expiry_date.strftime('%d-%b-%Y')
+                        })
+
+        if expiring_soon_records:
+            expiring_df = pd.DataFrame(expiring_soon_records)
+            st.dataframe(expiring_df, use_container_width=True)
+        else:
+            st.info("✅ No items are expiring in the next 25 days.")
+
+        st.markdown("---")
+
+        # --- KPIs ---
         total_equipment = len(df_equip)
         expired_count = 0
         expiring_soon_count = 0
@@ -651,6 +679,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
 
         st.markdown("---")
         
+        # --- VISUALIZATIONS ---
         st.subheader("Visual Insights")
         c1_eq, c2_eq = st.columns(2)
 
@@ -684,6 +713,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         
         st.markdown("---")
         
+        # --- FULL DATA TABLE ---
         st.subheader("Full Heavy Equipment Data")
         df_display_eq = df_equip.copy()
         for col in date_cols:
@@ -731,4 +761,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
