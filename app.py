@@ -422,7 +422,7 @@ def show_heavy_vehicle_form(sheet):
             except Exception as e:
                 st.error(f"❌ Error: {e}")
 
-# -------------------- ADVANCED DASHBOARD --------------------
+# -------------------- ADVANCED DASHBOARD (MODIFIED) --------------------
 def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_vehicle_sheet):
     st.header("📊 Dashboard")
     tab_obs, tab_permit, tab_eqp, tab_veh = st.tabs([
@@ -541,7 +541,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
 
 
         with col_viz2:
-            # ✨ CHANGED: Replaced pie chart with a bar chart for better comparison
             if 'PERMIT ISSUER' in df_filtered.columns:
                 st.write("**Permit Count by Issuer**")
                 issuer_counts = df_filtered['PERMIT ISSUER'].value_counts().reset_index()
@@ -597,29 +596,58 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
 
         date_cols = ["T.P Expiry date", "Insurance expiry date", "T.P Card expiry date", "F.E TP expiry"]
         for col in date_cols:
-              if col in df_equip.columns:
-                    df_equip[col] = df_equip[col].apply(parse_date)
+                if col in df_equip.columns:
+                        df_equip[col] = df_equip[col].apply(parse_date)
 
         today = date.today()
         ten_days = today + timedelta(days=10)
 
-        st.subheader("🚨 T.P Card Expiry Alerts")
-        tp_card_col = "T.P Card expiry date"
-        tp_required_cols = ["Equipment type", "Palte No.", "Owner", tp_card_col]
+        # -------------------- NEW EXPIRY TRACKING TABLE --------------------
+        st.subheader("🚨 Equipment Document Expiry Alerts")
 
-        if all(col in df_equip.columns for col in tp_required_cols):
-            tp_alert_df = df_equip.loc[df_equip[tp_card_col] <= ten_days, tp_required_cols].copy()
-
-            if tp_alert_df.empty:
-                st.success("✅ No T.P cards are expired or expiring within 10 days.")
-            else:
-                tp_alert_df["Status"] = tp_alert_df[tp_card_col].apply(
-                    lambda d: "Expired" if d < today else "Expiring Soon"
-                )
-                st.dataframe(tp_alert_df, use_container_width=True)
-        else:
-            st.warning("Could not generate T.P Card alerts. One or more required columns are missing from the sheet: 'Equipment type', 'Palte No.', 'Owner', 'T.P Card expiry date'.")
+        # Define columns to identify the equipment and columns to check for expiry
+        id_cols = ["Equipment type", "Palte No.", "Owner", "Operator Name"]
         
+        # Filter to only include columns that actually exist in the sheet
+        existing_id_cols = [c for c in id_cols if c in df_equip.columns]
+        existing_date_cols = [c for c in date_cols if c in df_equip.columns]
+
+        if not existing_date_cols or not existing_id_cols:
+            st.warning("Could not generate alerts. Key identifier or date columns are missing from the sheet.")
+        else:
+            # Melt the DataFrame to turn date columns into rows
+            df_long = df_equip.melt(
+                id_vars=existing_id_cols, 
+                value_vars=existing_date_cols, 
+                var_name="Document Type", 
+                value_name="Expiry Date"
+            )
+
+            # Remove items where the date was never set
+            df_long.dropna(subset=['Expiry Date'], inplace=True)
+
+            # Filter for items that are expired or expiring within 10 days
+            df_alerts = df_long[df_long['Expiry Date'] <= ten_days].copy()
+
+            if df_alerts.empty:
+                st.success("✅ No documents are expired or expiring within 10 days.")
+            else:
+                # Add a status column for clarity
+                df_alerts['Status'] = df_alerts['Expiry Date'].apply(
+                    lambda d: "🚨 Expired" if d < today else "⚠️ Expiring Soon"
+                )
+                
+                # Format date for display
+                df_alerts['Expiry Date'] = df_alerts['Expiry Date'].apply(lambda d: d.strftime('%d-%b-%Y'))
+                
+                # Sort by Status (Expired first) then by date
+                df_alerts = df_alerts.sort_values(by=["Status", "Expiry Date"])
+                
+                # Reorder columns for better readability
+                display_cols = ["Status", "Expiry Date", "Document Type"] + existing_id_cols
+                st.dataframe(df_alerts[display_cols], use_container_width=True)
+        # ---------------------------------- END OF NEW TABLE ----------------------------------
+
         st.markdown("---")
 
         total_equipment = len(df_equip)
@@ -627,9 +655,10 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         expiring_soon_count = 0
 
         for col in date_cols:
-              if col in df_equip.columns:
-                    expired_count += df_equip[df_equip[col] < today].shape[0]
-                    expiring_soon_count += df_equip[(df_equip[col] >= today) & (df_equip[col] <= ten_days)].shape[0]
+                if col in df_equip.columns:
+                        # Use .loc to ensure we are checking the parsed date column
+                        expired_count += df_equip.loc[df_equip[col] < today].shape[0]
+                        expiring_soon_count += df_equip.loc[(df_equip[col] >= today) & (df_equip[col] <= ten_days)].shape[0]
 
         kpi1_eq, kpi2_eq, kpi3_eq = st.columns(3)
         kpi1_eq.metric(label="Total Equipment", value=total_equipment)
@@ -674,10 +703,20 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         st.subheader("Full Heavy Equipment Data")
         df_display_eq = df_equip.copy()
         for col in date_cols:
-              if col in df_display_eq.columns:
-                    df_display_eq[col] = df_display_eq[col].apply(badge_expiry, expiry_days=10)
+                if col in df_display_eq.columns:
+                        df_display_eq[col] = df_display_eq[col].apply(badge_expiry, expiry_days=10)
         
         st.dataframe(df_display_eq, use_container_width=True)
+
+    with tab_obs:
+        st.subheader("Observation Analytics")
+        st.info("Observation dashboard is under construction.")
+        # Placeholder for observation analytics
+
+    with tab_veh:
+        st.subheader("Heavy Vehicle Analytics")
+        st.info("Heavy Vehicle dashboard is under construction.")
+        # Placeholder for heavy vehicle analytics
 
 # -------------------- MAIN APP --------------------
 def main():
