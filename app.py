@@ -51,7 +51,7 @@ def get_sheets():
     """Connects to Google Sheets and returns worksheet objects."""
     creds = service_account.Credentials.from_service_account_info(
         st.secrets["gcp_service_account"],
-        scopes=["https.www.googleapis.com/auth/spreadsheets", "https.www.googleapis.com/auth/drive"]
+        scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     )
     client = gspread.authorize(creds)
 
@@ -430,10 +430,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
 
     with tab_permit:
         st.subheader("Advanced Permit Log Analytics")
-        
-        # --- MODIFICATION 1: Add your DRILL_SITES list here ---
-        DRILL_SITES = ["2485", "2566", "2534", "1969", "2549", "1972"]
-        
         try:
             df_permit = pd.DataFrame(permit_sheet.get_all_records())
             # Ensure column names are consistent and uppercase for easier access
@@ -454,18 +450,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         df_permit['DATE'] = pd.to_datetime(df_permit['DATE'], errors='coerce')
         df_permit.dropna(subset=['DATE'], inplace=True)
         df_permit = df_permit.sort_values(by='DATE', ascending=False)
-        
-        # --- MODIFICATION 2: Filter the DataFrame by your list BEFORE doing anything else ---
-        if 'DRILL SITE' in df_permit.columns:
-            # Convert 'DRILL SITE' column to string to ensure it matches your list
-            df_permit['DRILL SITE'] = df_permit['DRILL SITE'].astype(str)
-            # Apply the filter using .isin()
-            df_permit = df_permit[df_permit['DRILL SITE'].isin(DRILL_SITES)]
-        else:
-            st.warning("Could not find 'DRILL SITE' column. Cannot filter by site.")
-            # We can still proceed, but the chart will be empty or show all sites if column name is wrong
-        # --- End of MODIFICATION 2 ---
-
 
         # --- Interactive Filters ---
         st.markdown("#### Filter & Explore")
@@ -473,11 +457,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             col_filter1, col_filter2 = st.columns(2)
 
             with col_filter1:
-                # Handle empty DataFrame case *after* filtering
-                if df_permit.empty:
-                    st.warning("No permit data found for the specified drill sites.")
-                    return # Stop execution for this tab if no data
-                    
                 min_date = df_permit['DATE'].min().date()
                 max_date = df_permit['DATE'].max().date()
                 date_range = st.date_input(
@@ -503,7 +482,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         end_datetime = pd.to_datetime(end_date)
 
         # Create a boolean mask for each filter
-        # df_permit is already filtered by drill site, now we apply interactive filters
         mask = (df_permit['DATE'] >= start_datetime) & (df_permit['DATE'] <= end_datetime)
         if selected_types and 'TYPE OF PERMIT' in df_permit.columns:
             mask &= df_permit['TYPE OF PERMIT'].isin(selected_types)
@@ -552,18 +530,11 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
 
             if 'DRILL SITE' in df_filtered.columns:
                 st.write("**Permits by Drill Site**")
-                # Now this count will only include the sites from your list
                 site_counts = df_filtered['DRILL SITE'].value_counts().reset_index()
                 fig_site = px.bar(
                     site_counts, x='DRILL SITE', y='count', text_auto=True,
                     labels={'count': 'Count', 'DRILL SITE': 'Drill Site'}
                 )
-                # --- MODIFICATION 3: Force x-axis to be categorical ---
-                # This ensures "1969" and "2485" are treated as distinct bars,
-                # not as numbers on a continuous scale.
-                fig_site.update_xaxes(type='category')
-                # --- End of MODIFICATION 3 ---
-                
                 fig_site.update_layout(margin=dict(l=20, r=20, t=30, b=20))
                 st.plotly_chart(fig_site, use_container_width=True)
 
