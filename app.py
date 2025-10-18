@@ -32,7 +32,8 @@ def parse_date(s):
             continue
     return None
 
-def badge_expiry(d, expiry_days=10):
+# ✨ CHANGED: Default expiry days is now 25
+def badge_expiry(d, expiry_days=25):
     """Creates a visual badge for expiry dates."""
     if d is None:
         return "⚪ Not Set"
@@ -51,7 +52,7 @@ def get_sheets():
     """Connects to Google Sheets and returns worksheet objects."""
     creds = service_account.Credentials.from_service_account_info(
         st.secrets["gcp_service_account"],
-        scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+        scopes=["https.www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     )
     client = gspread.authorize(creds)
 
@@ -597,21 +598,25 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
 
         date_cols = ["T.P Expiry date", "Insurance expiry date", "T.P Card expiry date", "F.E TP expiry"]
         for col in date_cols:
-              if col in df_equip.columns:
-                    df_equip[col] = df_equip[col].apply(parse_date)
+                if col in df_equip.columns:
+                        df_equip[col] = df_equip[col].apply(parse_date)
 
+        # ✨ CHANGED: Set alert days to 25 and defined new limit variable
+        ALERT_DAYS = 25 
         today = date.today()
-        ten_days = today + timedelta(days=10)
+        alert_date_limit = today + timedelta(days=ALERT_DAYS)
 
         st.subheader("🚨 T.P Card Expiry Alerts")
         tp_card_col = "T.P Card expiry date"
         tp_required_cols = ["Equipment type", "Palte No.", "Owner", tp_card_col]
 
         if all(col in df_equip.columns for col in tp_required_cols):
-            tp_alert_df = df_equip.loc[df_equip[tp_card_col] <= ten_days, tp_required_cols].copy()
+            # ✨ CHANGED: Filter logic now uses alert_date_limit (25 days)
+            tp_alert_df = df_equip.loc[df_equip[tp_card_col] <= alert_date_limit, tp_required_cols].copy()
 
             if tp_alert_df.empty:
-                st.success("✅ No T.P cards are expired or expiring within 10 days.")
+                # ✨ CHANGED: Updated success message to 25 days
+                st.success(f"✅ No T.P cards are expired or expiring within {ALERT_DAYS} days.")
             else:
                 tp_alert_df["Status"] = tp_alert_df[tp_card_col].apply(
                     lambda d: "Expired" if d < today else "Expiring Soon"
@@ -627,14 +632,16 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         expiring_soon_count = 0
 
         for col in date_cols:
-              if col in df_equip.columns:
-                    expired_count += df_equip[df_equip[col] < today].shape[0]
-                    expiring_soon_count += df_equip[(df_equip[col] >= today) & (df_equip[col] <= ten_days)].shape[0]
+                if col in df_equip.columns:
+                        expired_count += df_equip[df_equip[col] < today].shape[0]
+                        # ✨ CHANGED: KPI calculation now uses alert_date_limit (25 days)
+                        expiring_soon_count += df_equip[(df_equip[col] >= today) & (df_equip[col] <= alert_date_limit)].shape[0]
 
         kpi1_eq, kpi2_eq, kpi3_eq = st.columns(3)
         kpi1_eq.metric(label="Total Equipment", value=total_equipment)
         kpi2_eq.metric(label="Total Expired Items", value=expired_count, delta="Action Required", delta_color="inverse")
-        kpi3_eq.metric(label="Expiring in 10 Days", value=expiring_soon_count, delta="Monitor Closely", delta_color="off")
+        # ✨ CHANGED: KPI label updated to 25 days
+        kpi3_eq.metric(label=f"Expiring in {ALERT_DAYS} Days", value=expiring_soon_count, delta="Monitor Closely", delta_color="off")
 
         st.markdown("---")
         
@@ -674,8 +681,9 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         st.subheader("Full Heavy Equipment Data")
         df_display_eq = df_equip.copy()
         for col in date_cols:
-              if col in df_display_eq.columns:
-                    df_display_eq[col] = df_display_eq[col].apply(badge_expiry, expiry_days=10)
+                if col in df_display_eq.columns:
+                        # ✨ CHANGED: Explicitly passing ALERT_DAYS (25) to badge_expiry
+                        df_display_eq[col] = df_display_eq[col].apply(badge_expiry, expiry_days=ALERT_DAYS)
         
         st.dataframe(df_display_eq, use_container_width=True)
 
