@@ -154,23 +154,19 @@ def show_observation_form(sheet):
                 "Security, Unsafe Behavior, and other project Requirements",
                 "Trenching/Excavation/Shoring", "Vehicles / Traffic Control",
                 "Work Permit, Risk Assessment, JSA & other procedures"
-            ]),  # "Fire Extinguisher T.P Expiry" removed here
+            ]),
             "CLASSIFICATION": st.selectbox("Classification", ["POSITIVE", "UNSAFE CONDITION", "UNSAFE ACT"]),
             "STATUS": st.selectbox("Status", ["Open", "Closed"]),
         }
 
         submit = st.form_submit_button("Submit")
         if submit:
-            # block submission if someone manually typed/selected the banned category for VEHICHLE
-            if data.get("CATEGORY") == "Fire Extinguisher T.P Expiry" and data.get("DISCIPLINE") == "VEHICHLE":
-                st.error("❌ Submissions with 'Fire Extinguisher T.P Expiry' for heavy vehicle are not allowed.")
-            else:
-                try:
-                    sheet.append_row(list(data.values()))
-                    st.success("✅ Observation submitted successfully!")
-                    submitted = True
-                except Exception as e:
-                    st.error(f"❌ Error submitting data: {e}")
+            try:
+                sheet.append_row(list(data.values()))
+                st.success("✅ Observation submitted successfully!")
+                submitted = True
+            except Exception as e:
+                st.error(f"❌ Error submitting data: {e}")
 
     if submitted:
         if st.button("➕ Enter New Observation Form"):
@@ -216,9 +212,6 @@ def show_combined_dashboard(sheet1, sheet2):
         st.subheader("📋 Observation Dashboard")
         obs_data = sheet1.get_all_records()
         obs_df = pd.DataFrame(obs_data)
-        # filter out existing rows that are Fire Extinguisher T.P Expiry for VEHICHLE
-        if not obs_df.empty and "CATEGORY" in obs_df.columns and "DISCIPLINE" in obs_df.columns:
-            obs_df = obs_df[~((obs_df["CATEGORY"] == "Fire Extinguisher T.P Expiry") & (obs_df["DISCIPLINE"] == "VEHICHLE"))]
         st.dataframe(obs_df)
 
     elif dash_option == "🛠️ Permit Dashboard":
