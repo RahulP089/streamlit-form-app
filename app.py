@@ -355,7 +355,6 @@ def show_permit_form(sheet):
         activity = st.text_area("Activity")
 
         if st.form_submit_button("Submit"):
-            # ✨ CORRECTED: Data order matches the requested sheet structure exactly.
             data = [
                 date_val.strftime("%d-%b-%Y"), # Column A: DATE
                 drill_site,                   # Column B: DRILL SITE
@@ -602,7 +601,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         today = date.today()
         ten_days = today + timedelta(days=10)
 
-        # -------------------- NEW EXPIRY TRACKING TABLE --------------------
+        # -------------------- EXPIRY TRACKING TABLE --------------------
         st.subheader("🚨 Equipment Document Expiry Alerts")
 
         # Define columns to identify the equipment and columns to check for expiry
@@ -643,10 +642,23 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 # Sort by Status (Expired first) then by date
                 df_alerts = df_alerts.sort_values(by=["Status", "Expiry Date"])
                 
-                # Reorder columns for better readability
-                display_cols = ["Status", "Expiry Date", "Document Type"] + existing_id_cols
-                st.dataframe(df_alerts[display_cols], use_container_width=True)
-        # ---------------------------------- END OF NEW TABLE ----------------------------------
+                # ✨ --- MODIFIED LINE: Reordered columns as requested --- ✨
+                display_cols = [
+                    "Equipment type", 
+                    "Palte No.", 
+                    "Document Type", 
+                    "Expiry Date", 
+                    "Status", 
+                    "Operator Name", 
+                    "Owner"
+                ]
+                
+                # Filter display_cols to only include columns that actually exist in df_alerts
+                # This prevents errors if a column name is mistyped or missing
+                final_cols = [col for col in display_cols if col in df_alerts.columns]
+                
+                st.dataframe(df_alerts[final_cols], use_container_width=True)
+        # ---------------------------------- END OF TABLE ----------------------------------
 
         st.markdown("---")
 
