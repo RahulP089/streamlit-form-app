@@ -75,12 +75,14 @@ def get_sheets():
         "FA box Status", "Documents"
     ]
 
+    # ----- MODIFICATION 1: Removed 'Fire Extinguisher T.P Expiry' from header list -----
     heavy_vehicle_headers = [
         "Vehicle Type", "Make", "Plate No", "Asset Code", "Owner", "MVPI Expiry date", "Insurance Expiry",
         "Driver Name", "Iqama No", "Licence Expiry", "Q.R code", "F.A Box",
-        "Fire Extinguisher T.P Expiry", "PWAS Status", "Seat belt damaged", "Tyre Condition",
+        "PWAS Status", "Seat belt damaged", "Tyre Condition",
         "Suspension Systems", "Remarks"
     ]
+    # -------------------------------------------------------------------------------
 
     heavy_equip_sheet = get_or_create(HEAVY_EQUIP_TAB, headers=heavy_equip_headers)
     heavy_vehicle_sheet = get_or_create(HEAVY_VEHICLE_TAB, headers=heavy_vehicle_headers)
@@ -394,7 +396,9 @@ def show_heavy_vehicle_form(sheet):
         mvpi_expiry = d1.date_input("MVPI Expiry date").strftime(date_format)
         insurance_expiry = d2.date_input("Insurance Expiry").strftime(date_format)
         licence_expiry = d1.date_input("Licence Expiry").strftime(date_format)
-        fire_ext_tp_expiry = d2.date_input("Fire Extinguisher T.P Expiry").strftime(date_format)
+        # ----- MODIFICATION 2: Removed 'fire_ext_tp_expiry' input from the form -----
+        # fire_ext_tp_expiry = d2.date_input("Fire Extinguisher T.P Expiry").strftime(date_format)
+        # -------------------------------------------------------------------------
 
         st.subheader("Condition & Status")
         s1, s2 = st.columns(2)
@@ -407,14 +411,16 @@ def show_heavy_vehicle_form(sheet):
         remarks = st.text_area("Remarks")
 
         if st.form_submit_button("Submit"):
+            # ----- MODIFICATION 3: Removed 'fire_ext_tp_expiry' from the data list -----
             data = [
                 vehicle_type, make, plate_no, asset_code, owner, 
                 mvpi_expiry, insurance_expiry,
                 driver_name, iqama_no, licence_expiry,
-                qr_code, fa_box, fire_ext_tp_expiry,
+                qr_code, fa_box, 
                 pwas_status, seatbelt_damaged, tyre_condition,
                 suspension_systems, remarks
             ]
+            # --------------------------------------------------------------------------
             try:
                 sheet.append_row(data)
                 st.success("✅ Heavy Vehicle submitted successfully!")
@@ -700,7 +706,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                     hole=0.3
                 )
                 st.plotly_chart(fig_pwas, use_container_width=True)
-            
+                
         if 'Owner' in df_equip.columns:
             fig_owner = px.bar(
                 df_equip['Owner'].value_counts().nlargest(10).reset_index(),
@@ -769,5 +775,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
