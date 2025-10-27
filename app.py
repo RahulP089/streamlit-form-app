@@ -359,13 +359,13 @@ def show_permit_form(sheet):
         if st.form_submit_button("Submit"):
             data = [
                 date_val.strftime("%d-%b-%Y"), # Column A: DATE
-                drill_site,                   # Column B: DRILL SITE
-                work_location,                # Column C: WORK LOCATION
-                permit_no,                    # Column D: PERMIT NO
-                permit_type,                  # Column E: TYPE OF PERMIT
-                activity,                     # Column F: ACTIVITY
-                permit_receiver,              # Column G: PERMIT RECEIVER
-                permit_issuer                 # Column H: PERMIT ISSUER
+                drill_site,                 # Column B: DRILL SITE
+                work_location,              # Column C: WORK LOCATION
+                permit_no,                  # Column D: PERMIT NO
+                permit_type,                # Column E: TYPE OF PERMIT
+                activity,                   # Column F: ACTIVITY
+                permit_receiver,            # Column G: PERMIT RECEIVER
+                permit_issuer               # Column H: PERMIT ISSUER
             ]
             try:
                 sheet.append_row(data)
@@ -534,15 +534,45 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 fig_type_pie.update_layout(showlegend=False, margin=dict(l=10, r=10, t=30, b=10))
                 st.plotly_chart(fig_type_pie, use_container_width=True)
 
-            if 'DRILL SITE' in df_filtered.columns:
-                st.write("**Permits by Drill Site**")
+            # -------------------- START: ADVANCED GRAPH (MODIFIED) --------------------
+            # Check if both columns needed for the stacked bar chart exist
+            if 'DRILL SITE' in df_filtered.columns and 'TYPE OF PERMIT' in df_filtered.columns:
+                st.write("**Permit Composition by Drill Site**")
+                
+                # Group by both drill site and permit type to get counts for stacking
+                site_permit_counts = df_filtered.groupby(['DRILL SITE', 'TYPE OF PERMIT']).size().reset_index(name='count')
+                
+                fig_site_stacked = px.bar(
+                    site_permit_counts, 
+                    x='DRILL SITE', 
+                    y='count', 
+                    color='TYPE OF PERMIT',  # This creates the stack
+                    title="Permit Type Breakdown per Site",
+                    text_auto=True,
+                    labels={
+                        'count': 'Total Permits', 
+                        'DRILL SITE': 'Drill Site', 
+                        'TYPE OF PERMIT': 'Permit Type'
+                    }
+                )
+                fig_site_stacked.update_layout(
+                    barmode='stack', # Ensure bars are stacked
+                    margin=dict(l=20, r=20, t=40, b=20) # Adjust top margin for title
+                )
+                st.plotly_chart(fig_site_stacked, use_container_width=True)
+            
+            # Fallback to the simple bar chart if 'TYPE OF PERMIT' column is missing
+            elif 'DRILL SITE' in df_filtered.columns:
+                st.write("**Total Permits by Drill Site**")
                 site_counts = df_filtered['DRILL SITE'].value_counts().reset_index()
                 fig_site = px.bar(
                     site_counts, x='DRILL SITE', y='count', text_auto=True,
+                    title="Total Permits per Drill Site",
                     labels={'count': 'Count', 'DRILL SITE': 'Drill Site'}
                 )
-                fig_site.update_layout(margin=dict(l=20, r=20, t=30, b=20))
+                fig_site.update_layout(margin=dict(l=20, r=20, t=40, b=20))
                 st.plotly_chart(fig_site, use_container_width=True)
+            # -------------------- END: ADVANCED GRAPH --------------------
 
 
         with col_viz2:
@@ -775,4 +805,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
