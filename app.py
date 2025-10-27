@@ -412,7 +412,7 @@ def show_heavy_vehicle_form(sheet):
         pwas_status = s2.selectbox("PWAS Status", ["Working", "Not Working", "Alarm Not Audible", "Faulty Camera/Monitor", "N/A"])
         seatbelt_damaged = s1.selectbox("Seat belt damaged", ["Yes", "No", "N/A"])
         tyre_condition = s2.selectbox("Tyre Condition", ["Good", "Worn Out", "Damaged", "Needs Replacement", "N/A"])
-        suspension_systems = s1.selectbox("Suspension Systems", ["Good", "Faulty", "Needs Repair", "Damaged", "N/A"])
+        suspension_systems = s1.selectbox("Suspension Systems", ["Good", "Faulty", "Needs Repair", "DamDamaged", "N/A"])
         
         remarks = st.text_area("Remarks")
 
@@ -538,7 +538,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 fig_type_pie.update_layout(showlegend=False, margin=dict(l=10, r=10, t=30, b=10))
                 st.plotly_chart(fig_type_pie, use_container_width=True)
 
-            # -------------------- START: ADVANCED GRAPH (FIXED) --------------------
+            # -------------------- START: ADVANCED GRAPH (FINAL FIX) --------------------
             # Check if both columns needed for the stacked bar chart exist
             if 'DRILL SITE' in df_filtered.columns and 'TYPE OF PERMIT' in df_filtered.columns:
                 st.write("**Permit Composition by Drill Site**")
@@ -546,10 +546,17 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 # Group by both drill site and permit type to get counts for stacking
                 site_permit_counts = df_filtered.groupby(['DRILL SITE', 'TYPE OF PERMIT']).size().reset_index(name='count')
                 
-                # --- THIS IS THE FIX ---
-                # Force the 'DRILL SITE' column to be treated as text (string/category)
-                site_permit_counts['DRILL SITE'] = site_permit_counts['DRILL SITE'].astype(str)
-                # -----------------------
+                # --- THIS IS THE NEW FIX ---
+                # Convert DRILL SITE to a categorical type based on ALL_SITES
+                # This ensures all sites are present on the axis, in the correct order.
+                site_permit_counts['DRILL SITE'] = pd.Categorical(
+                    site_permit_counts['DRILL SITE'],
+                    categories=ALL_SITES,
+                    ordered=True
+                )
+                # Drop any rows that might not be in our master ALL_SITES list
+                site_permit_counts = site_permit_counts.dropna(subset=['DRILL SITE'])
+                # ---------------------------
 
                 fig_site_stacked = px.bar(
                     site_permit_counts, 
@@ -575,10 +582,15 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 st.write("**Total Permits by Drill Site**")
                 site_counts = df_filtered['DRILL SITE'].value_counts().reset_index()
 
-                # --- THIS IS THE FIX ---
-                # Apply the same fix to the fallback chart
-                site_counts['DRILL SITE'] = site_counts['DRILL SITE'].astype(str)
-                # -----------------------
+                # --- APPLY THE SAME FIX HERE ---
+                # Convert to categorical to ensure all sites are shown in order
+                site_counts['DRILL SITE'] = pd.Categorical(
+                    site_counts['DRILL SITE'],
+                    categories=ALL_SITES,
+                    ordered=True
+                )
+                site_counts = site_counts.dropna(subset=['DRILL SITE'])
+                # ---------------------------
 
                 fig_site = px.bar(
                     site_counts, x='DRILL SITE', y='count', text_auto=True,
