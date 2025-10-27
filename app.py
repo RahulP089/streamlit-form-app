@@ -456,11 +456,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         df_permit['DATE'] = pd.to_datetime(df_permit['DATE'], errors='coerce')
         df_permit.dropna(subset=['DATE'], inplace=True)
         df_permit = df_permit.sort_values(by='DATE', ascending=False)
-        
-        # --- Define the canonical list of drill sites ---
-        # This list is used to filter out old/corrupted data from the sheet
-        DRILL_SITES = ["2485", "2566", "2534", "1969", "2549", "1972", "HRDH Laydown"]
-
 
         # --- Interactive Filters ---
         st.markdown("#### Filter & Explore")
@@ -500,15 +495,9 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             mask &= df_permit['PERMIT ISSUER'].isin(selected_issuers)
 
         df_filtered = df_permit[mask]
-        
-        # -------------------- ✨ YOUR CORRECTION IS HERE ✨ --------------------
-        # Filter the DataFrame to ONLY include the valid drill sites
-        if 'DRILL SITE' in df_filtered.columns:
-            df_filtered = df_filtered[df_filtered['DRILL SITE'].isin(DRILL_SITES)]
-        # ---------------------------------------------------------------------
 
         if df_filtered.empty:
-            st.warning("No data matches the selected filters (or all data was for invalid drill sites).")
+            st.warning("No data matches the selected filters.")
             return
 
         # --- High-Level KPIs ---
@@ -547,7 +536,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
 
             if 'DRILL SITE' in df_filtered.columns:
                 st.write("**Permits by Drill Site**")
-                # This chart will now only show data from the valid DRILL_SITES list
                 site_counts = df_filtered['DRILL SITE'].value_counts().reset_index()
                 fig_site = px.bar(
                     site_counts, x='DRILL SITE', y='count', text_auto=True,
@@ -787,3 +775,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
