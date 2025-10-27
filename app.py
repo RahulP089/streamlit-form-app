@@ -315,7 +315,7 @@ def show_observation_form(sheet):
 def show_permit_form(sheet):
     st.header("🛠️ Daily Internal Permit Log")
     
-    DRILL_SITES = ["2485", "2566", "2534", "1969", "2549", "1972"]
+    DRILL_SITES = ["2485", "2566", "2534", "1969", "2549", "1972","HRDH Laydown"]
     WORK_LOCATIONS = [
         "Well Head", "OHPL", "E&I Skid", "Burn Pit", "Cellar",
         "Flow Line", "Lay down", "CP area"
@@ -775,3 +775,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
