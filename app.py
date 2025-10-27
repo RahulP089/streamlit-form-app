@@ -75,14 +75,12 @@ def get_sheets():
         "FA box Status", "Documents"
     ]
 
-    # ----- MODIFICATION 1: Removed 'Fire Extinguisher T.P Expiry' from header list -----
     heavy_vehicle_headers = [
         "Vehicle Type", "Make", "Plate No", "Asset Code", "Owner", "MVPI Expiry date", "Insurance Expiry",
         "Driver Name", "Iqama No", "Licence Expiry", "Q.R code", "F.A Box",
         "PWAS Status", "Seat belt damaged", "Tyre Condition",
         "Suspension Systems", "Remarks"
     ]
-    # -------------------------------------------------------------------------------
 
     heavy_equip_sheet = get_or_create(HEAVY_EQUIP_TAB, headers=heavy_equip_headers)
     heavy_vehicle_sheet = get_or_create(HEAVY_VEHICLE_TAB, headers=heavy_vehicle_headers)
@@ -396,9 +394,7 @@ def show_heavy_vehicle_form(sheet):
         mvpi_expiry = d1.date_input("MVPI Expiry date").strftime(date_format)
         insurance_expiry = d2.date_input("Insurance Expiry").strftime(date_format)
         licence_expiry = d1.date_input("Licence Expiry").strftime(date_format)
-        # ----- MODIFICATION 2: Removed 'fire_ext_tp_expiry' input from the form -----
         # fire_ext_tp_expiry = d2.date_input("Fire Extinguisher T.P Expiry").strftime(date_format)
-        # -------------------------------------------------------------------------
 
         st.subheader("Condition & Status")
         s1, s2 = st.columns(2)
@@ -411,7 +407,6 @@ def show_heavy_vehicle_form(sheet):
         remarks = st.text_area("Remarks")
 
         if st.form_submit_button("Submit"):
-            # ----- MODIFICATION 3: Removed 'fire_ext_tp_expiry' from the data list -----
             data = [
                 vehicle_type, make, plate_no, asset_code, owner, 
                 mvpi_expiry, insurance_expiry,
@@ -420,7 +415,6 @@ def show_heavy_vehicle_form(sheet):
                 pwas_status, seatbelt_damaged, tyre_condition,
                 suspension_systems, remarks
             ]
-            # --------------------------------------------------------------------------
             try:
                 sheet.append_row(data)
                 st.success("✅ Heavy Vehicle submitted successfully!")
@@ -534,7 +528,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 fig_type_pie.update_layout(showlegend=False, margin=dict(l=10, r=10, t=30, b=10))
                 st.plotly_chart(fig_type_pie, use_container_width=True)
 
-            # -------------------- START: ADVANCED GRAPH (MODIFIED) --------------------
+            # -------------------- START: ADVANCED GRAPH (FIXED) --------------------
             # Check if both columns needed for the stacked bar chart exist
             if 'DRILL SITE' in df_filtered.columns and 'TYPE OF PERMIT' in df_filtered.columns:
                 st.write("**Permit Composition by Drill Site**")
@@ -542,6 +536,11 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 # Group by both drill site and permit type to get counts for stacking
                 site_permit_counts = df_filtered.groupby(['DRILL SITE', 'TYPE OF PERMIT']).size().reset_index(name='count')
                 
+                # --- THIS IS THE FIX ---
+                # Force the 'DRILL SITE' column to be treated as text (string/category)
+                site_permit_counts['DRILL SITE'] = site_permit_counts['DRILL SITE'].astype(str)
+                # -----------------------
+
                 fig_site_stacked = px.bar(
                     site_permit_counts, 
                     x='DRILL SITE', 
@@ -565,6 +564,12 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             elif 'DRILL SITE' in df_filtered.columns:
                 st.write("**Total Permits by Drill Site**")
                 site_counts = df_filtered['DRILL SITE'].value_counts().reset_index()
+
+                # --- THIS IS THE FIX ---
+                # Apply the same fix to the fallback chart
+                site_counts['DRILL SITE'] = site_counts['DRILL SITE'].astype(str)
+                # -----------------------
+
                 fig_site = px.bar(
                     site_counts, x='DRILL SITE', y='count', text_auto=True,
                     title="Total Permits per Drill Site",
@@ -678,7 +683,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 # Sort by Status (Expired first) then by date
                 df_alerts = df_alerts.sort_values(by=["Status", "Expiry Date"])
                 
-                # ✨ --- MODIFIED LINE: Reordered columns as requested --- ✨
                 display_cols = [
                     "Equipment type", 
                     "Palte No.", 
@@ -690,7 +694,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 ]
                 
                 # Filter display_cols to only include columns that actually exist in df_alerts
-                # This prevents errors if a column name is mistyped or missing
                 final_cols = [col for col in display_cols if col in df_alerts.columns]
                 
                 st.dataframe(df_alerts[final_cols], use_container_width=True)
