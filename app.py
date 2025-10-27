@@ -19,6 +19,13 @@ EQUIPMENT_URL = "https://docs.google.com/spreadsheets/d/1KbjDWkdG4Ce9fSDs3tCZsky
 HEAVY_EQUIP_TAB = "Heavy Equipment"
 HEAVY_VEHICLE_TAB = "Heavy Vehicles"
 
+# --- MASTER SITE LIST ---
+ALL_SITES = [
+    "1858", "1969", "1972", "2433", "2447", "2485", 
+    "2534", "2549", "2553", "2556", "2566", "HRDH Laydown"
+]
+# ------------------------
+
 # -------------------- UTILITIES --------------------
 def parse_date(s):
     """Safely parses a string into a date object, trying multiple formats."""
@@ -183,7 +190,7 @@ def show_equipment_form(sheet):
 #--------------------------------------------------------------- HSE OBSERVATION FORM-----------------------------------------------------------------------------------------------
 def show_observation_form(sheet):
     st.header("📋 Daily HSE Site Observation Entry Form")
-    well_numbers = ["2549","2534", "2556", "1858", "2433", "2553", "2447","2485","1969"]
+    # Note: well_numbers list was removed and replaced with ALL_SITES from top of file
     
     OBSERVER_NAMES = [
         "Ajish", "Akhil Mohan", "Aqib", "Arfan", "Asim", "Ashraf Khan", "Bijo",
@@ -281,7 +288,8 @@ def show_observation_form(sheet):
             category = st.selectbox("Category", CATEGORIES)
             
         with col2:
-            well_no = st.selectbox("Well No", well_numbers)
+            # --- MODIFIED LINE ---
+            well_no = st.selectbox("Well No", ALL_SITES) # Uses the master ALL_SITES list
             supervisor_name = st.selectbox("Supervisor Name", supervisor_names)
             trade = SUPERVISOR_TRADE_MAP.get(supervisor_name, "")
             discipline = st.text_input("Discipline", value=trade, disabled=True)
@@ -313,7 +321,8 @@ def show_observation_form(sheet):
 def show_permit_form(sheet):
     st.header("🛠️ Daily Internal Permit Log")
     
-    DRILL_SITES = ["2485", "2566", "2534", "1969", "2549", "1972","HRDH Laydown"]
+    # Note: DRILL_SITES list was removed and replaced with ALL_SITES from top of file
+    
     WORK_LOCATIONS = [
         "Well Head", "OHPL", "E&I Skid", "Burn Pit", "Cellar",
         "Flow Line", "Lay down", "CP area"
@@ -343,7 +352,8 @@ def show_permit_form(sheet):
         
         with col1:
             date_val = st.date_input("Date")
-            drill_site = st.selectbox("Drill Site", DRILL_SITES)
+            # --- MODIFIED LINE ---
+            drill_site = st.selectbox("Drill Site", ALL_SITES) # Uses the master ALL_SITES list
             work_location = st.selectbox("Work Location", WORK_LOCATIONS)
             permit_receiver = st.selectbox("Permit Receiver", PERMIT_RECEIVERS)
 
