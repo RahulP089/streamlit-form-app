@@ -22,7 +22,7 @@ HEAVY_VEHICLE_TAB = "Heavy Vehicles"
 # --- MASTER SITE LIST ---
 ALL_SITES = [
     "1858", "1969", "1972", "2433", "2447", "2485", 
-    "2534", "2549", "2553", "2556", "2566", "HRDH Laydown"
+    "2534", "2549", "2553", "2556", "2566","2570","HRDH Laydown"
 ]
 # ------------------------
 
@@ -830,3 +830,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
