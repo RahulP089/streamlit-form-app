@@ -39,7 +39,7 @@ def parse_date(s):
             continue
     return None
 
-def badge_expiry(d, expiry_days=10):
+def badge_expiry(d, expiry_days=30): # <--- MODIFIED
     """Creates a visual badge for expiry dates."""
     if d is None:
         return "⚪ Not Set"
@@ -367,13 +367,13 @@ def show_permit_form(sheet):
         if st.form_submit_button("Submit"):
             data = [
                 date_val.strftime("%d-%b-%Y"), # Column A: DATE
-                drill_site,                 # Column B: DRILL SITE
-                work_location,              # Column C: WORK LOCATION
-                permit_no,                  # Column D: PERMIT NO
-                permit_type,                # Column E: TYPE OF PERMIT
-                activity,                   # Column F: ACTIVITY
-                permit_receiver,            # Column G: PERMIT RECEIVER
-                permit_issuer               # Column H: PERMIT ISSUER
+                drill_site,                # Column B: DRILL SITE
+                work_location,             # Column C: WORK LOCATION
+                permit_no,                 # Column D: PERMIT NO
+                permit_type,               # Column E: TYPE OF PERMIT
+                activity,                  # Column F: ACTIVITY
+                permit_receiver,           # Column G: PERMIT RECEIVER
+                permit_issuer              # Column H: PERMIT ISSUER
             ]
             try:
                 sheet.append_row(data)
@@ -662,7 +662,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                         df_equip[col] = df_equip[col].apply(parse_date)
 
         today = date.today()
-        ten_days = today + timedelta(days=10)
+        thirty_days = today + timedelta(days=30) # <--- MODIFIED
 
         # -------------------- EXPIRY TRACKING TABLE --------------------
         st.subheader("🚨 Equipment Document Expiry Alerts")
@@ -688,11 +688,11 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             # Remove items where the date was never set
             df_long.dropna(subset=['Expiry Date'], inplace=True)
 
-            # Filter for items that are expired or expiring within 10 days
-            df_alerts = df_long[df_long['Expiry Date'] <= ten_days].copy()
+            # Filter for items that are expired or expiring within 30 days
+            df_alerts = df_long[df_long['Expiry Date'] <= thirty_days].copy() # <--- MODIFIED
 
             if df_alerts.empty:
-                st.success("✅ No documents are expired or expiring within 10 days.")
+                st.success("✅ No documents are expired or expiring within 30 days.") # <--- MODIFIED
             else:
                 # Add a status column for clarity
                 df_alerts['Status'] = df_alerts['Expiry Date'].apply(
@@ -731,13 +731,13 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 if col in df_equip.columns:
                         # Use .loc to ensure we are checking the parsed date column
                         expired_count += df_equip.loc[df_equip[col] < today].shape[0]
-                        expiring_soon_count += df_equip.loc[(df_equip[col] >= today) & (df_equip[col] <= ten_days)].shape[0]
+                        expiring_soon_count += df_equip.loc[(df_equip[col] >= today) & (df_equip[col] <= thirty_days)].shape[0] # <--- MODIFIED
 
         kpi1_eq, kpi2_eq, kpi3_eq = st.columns(3)
         kpi1_eq.metric(label="Total Equipment", value=total_equipment)
         kpi2_eq.metric(label="Total Expired Items", value=expired_count, delta="Action Required", delta_color="inverse")
-        kpi3_eq.metric(label="Expiring in 10 Days", value=expiring_soon_count, delta="Monitor Closely", delta_color="off")
-
+        kpi3_eq.metric(label="Expiring in 30 Days", value=expiring_soon_count, delta="Monitor Closely", delta_color="off") # <--- MODIFIED
+        
         st.markdown("---")
         
         st.subheader("Visual Insights")
@@ -777,7 +777,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         df_display_eq = df_equip.copy()
         for col in date_cols:
                 if col in df_display_eq.columns:
-                        df_display_eq[col] = df_display_eq[col].apply(badge_expiry, expiry_days=10)
+                        df_display_eq[col] = df_display_eq[col].apply(badge_expiry, expiry_days=30) # <--- MODIFIED
         
         st.dataframe(df_display_eq, use_container_width=True)
 
@@ -830,4 +830,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
