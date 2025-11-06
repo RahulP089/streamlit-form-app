@@ -344,7 +344,7 @@ def show_permit_form(sheet):
         "SHAIK KHADEER", "SIMON GACHAU MUCHIRI", "JARUZELSKI MELENDES PESINO",
         "HAIDAR NASSER MOHAMMED ALKHALAF", "JEYARAJA JAYAPAL",
         "HASHEM ABDULMAJEED ALBAHRANI", "PRATHEEP RADHAKRISHNAN",
-        "REYNANTE CAYUMO AMOYO", "JAY MARASIGAN BONDOC", "SHAHWAZ KHAN","PACIFICO LUBANG ICHON"
+        "REYNANTE CAYUMO AMOYO", "JAY MARASIGAN BONDOC", "SHAHWAZ KHAN","PACIFICO LUBANG ICHON","ELMER"
     ]
 
     with st.form("permit_form", clear_on_submit=True):
@@ -830,5 +830,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
