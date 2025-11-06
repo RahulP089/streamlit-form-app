@@ -346,6 +346,42 @@ def show_permit_form(sheet):
         "HASHEM ABDULMAJEED ALBAHRANI", "PRATHEEP RADHAKRISHNAN",
         "REYNANTE CAYUMO AMOYO", "JAY MARASIGAN BONDOC", "SHAHWAZ KHAN","PACIFICO LUBANG ICHON","ELMER","REMY E PORRAS"
     ]
+    
+    # -------------------- START: MODIFIED SECTION --------------------
+    # List of activities provided by the user
+    PERMIT_ACTIVITIES = [
+        "--- Select Activity ---",
+        "Fitup welding cutting and grinding",
+        "Holiday test",
+        "Manual painting",
+        "CP drilling",
+        "Trenching and Backfilling",
+        "Backfilling leveling and compaction",
+        "Construction of ROW",
+        "Marl mixing loading and unloading",
+        "Construction of fence",
+        "Cable pulling",
+        "Cable termination and threading",
+        "Conduit fixing",
+        "Construction of Burn pit",
+        "Loading and unloading of materials",
+        "Abrasive blasting and painting",
+        "Diesel refueling",
+        "Equipment maintenance",
+        "Water filling",
+        "Surface preparation and concrete chipping",
+        "Foam work",
+        "Shuttering activity",
+        "Nitrogen purging",
+        "Berming",
+        "Marker installation",
+        "Grouting",
+        "Cellar construction",
+        "Entry into CSE",
+        "Entry into Burnpit",
+        "Hydro test"
+    ]
+    # -------------------- END: MODIFIED SECTION --------------------
 
     with st.form("permit_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
@@ -362,18 +398,22 @@ def show_permit_form(sheet):
             permit_type = st.selectbox("Type of Permit", PERMIT_TYPES)
             permit_issuer = st.selectbox("Permit Issuer", PERMIT_ISSUERS)
 
-        activity = st.text_area("Activity")
+        # -------------------- START: MODIFIED SECTION --------------------
+        # Replaced st.text_area with st.selectbox
+        activity = st.selectbox("Activity", PERMIT_ACTIVITIES)
+        # -------------------- END: MODIFIED SECTION --------------------
+
 
         if st.form_submit_button("Submit"):
             data = [
                 date_val.strftime("%d-%b-%Y"), # Column A: DATE
-                drill_site,                # Column B: DRILL SITE
-                work_location,             # Column C: WORK LOCATION
-                permit_no,                 # Column D: PERMIT NO
-                permit_type,               # Column E: TYPE OF PERMIT
-                activity,                  # Column F: ACTIVITY
-                permit_receiver,           # Column G: PERMIT RECEIVER
-                permit_issuer              # Column H: PERMIT ISSUER
+                drill_site,                   # Column B: DRILL SITE
+                work_location,                # Column C: WORK LOCATION
+                permit_no,                    # Column D: PERMIT NO
+                permit_type,                  # Column E: TYPE OF PERMIT
+                activity,                     # Column F: ACTIVITY
+                permit_receiver,              # Column G: PERMIT RECEIVER
+                permit_issuer                 # Column H: PERMIT ISSUER
             ]
             try:
                 sheet.append_row(data)
@@ -830,7 +870,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
