@@ -351,6 +351,7 @@ def show_permit_form(sheet):
     # List of activities provided by the user
     PERMIT_ACTIVITIES = [
         "--- Select Activity ---",
+        "Mechanical Excavation",
         "Fitup welding cutting and grinding",
         "Holiday test",
         "Manual painting",
@@ -870,3 +871,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
