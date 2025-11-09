@@ -193,10 +193,10 @@ def show_observation_form(sheet):
     # Note: well_numbers list was removed and replaced with ALL_SITES from top of file
     
     OBSERVER_NAMES = [
-        "Ajish", "Akhil Mohan", "Aqib", "Arfan", "Asim", "Ashraf Khan", "Bijo",
-        "Felin", "Habeeb", "Ilyas", "Irfan", "Jamali", "Joseph Cruz", "Mohsin",
-        "Pradeep", "Rajshekar", "Ricken", "Shiva Kannan", "Shiva Subramaniyam",
-        "Sudheesh", "Vaishak", "Vargheese", "Wali Alam", "Zaheer"
+        "AJISH", "AKHIL MOHAN", "AQIB", "ARFAN", "ASIM", "ASHRAF KHAN", "BIJO",
+        "FELIN", "HABEEB", "ILYAS", "IRFAN", "JAMALI", "JOSEPH CRUZ", "MOHSIN",
+        "PRADEEP", "RAJSHEKAR", "RICKEN", "SHIVA KANNAN", "SHIVA SUBRAMANIYAM",
+        "SUDHEESH", "VAISHAK", "VARGHEESE", "WALI ALAM", "ZAHEER"
     ]
     
     AREAS = [
@@ -873,6 +873,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
