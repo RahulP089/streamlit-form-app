@@ -380,7 +380,8 @@ def show_permit_form(sheet):
         "Cellar construction",
         "Entry into CSE",
         "Entry into Burnpit",
-        "Hydro test"
+        "Hydro test",
+        "Scafolding activity"
     ]
     # -------------------- END: MODIFIED SECTION --------------------
 
@@ -871,4 +872,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
