@@ -325,7 +325,7 @@ def show_permit_form(sheet):
     
     WORK_LOCATIONS = [
         "Well Head", "OHPL", "E&I Skid", "Burn Pit", "Cellar",
-        "Flow Line", "Lay down", "CP area"
+        "Flow Line", "Lay down", "CP area","BD-Line"
     ]
     PERMIT_TYPES = ["Hot", "Cold", "CSE", "EOLB"]
     PERMIT_ISSUERS = ["VISHNU MOHAN", "UNNIMON SRINIVASAN"]
@@ -873,6 +873,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
