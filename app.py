@@ -362,7 +362,7 @@ def show_permit_form(sheet):
         "Scafolding activity",
         "Structure cutting",
         "Bolt Torquing",
-        "Surface Prepration"
+        "Surface Prepration",
         "Survey"
     ]
 
@@ -865,4 +865,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
