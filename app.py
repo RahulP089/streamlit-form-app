@@ -229,7 +229,7 @@ def show_observation_form(sheet):
     ]
 
     SUPERVISOR_TRADE_MAP = {
- "RAJA KUMAR": "CONTROLLER-EQUIPMENT", "SREEDHARAN VISWANATHAN": "SUPERVISOR-PIPING",
+"RAJA KUMAR": "CONTROLLER-EQUIPMENT", "SREEDHARAN VISWANATHAN": "SUPERVISOR-PIPING",
 "MANOJ THOMAS": "WELL IN CHARGE", "ANIL KUMAR JANARDHANAN": "WELL IN CHARGE",
 "SIVA PRASAD PILLAI": "FOREMAN-PIPING", "JAYAN RAJAJAN": "FOREMAN-PIPING",
 "MURUGAN VANNIYAPERUMAL": "COORDINATOR-NDE", "ANU MOHAN MOHANAN PILLAI": "FIELD ADMINISTRATOR",
@@ -648,14 +648,24 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 fig_receiver.update_layout(yaxis={'categoryorder':'total ascending'}, margin=dict(l=20, r=20, t=30, b=20))
                 st.plotly_chart(fig_receiver, use_container_width=True)
                 
-        # --- Time Series Analysis ---
+        # --- Time Series Analysis (MODIFIED) ---
         st.markdown("---")
         st.write("#### Permit Trend Over Time")
         permits_by_day = df_filtered.groupby(df_filtered['DATE'].dt.date).size().reset_index(name='count')
-        fig_time = px.line(
+        
+        # 1. Changed from px.line to px.area
+        fig_time = px.area(
             permits_by_day, x='DATE', y='count', markers=True,
             labels={'DATE': 'Date', 'count': 'Number of Permits'}
         )
+        
+        # 2. Added update_traces to match the style of your example image
+        fig_time.update_traces(
+            fill='tozeroy',  # This fills the area down to the y=0 line
+            fillcolor='rgba(220, 240, 220, 0.7)', # A light, semi-transparent green fill
+            line=dict(color='rgba(34, 139, 34, 1)')   # A solid, dark green line (ForestGreen)
+        )
+        
         fig_time.update_layout(margin=dict(l=20, r=20, t=30, b=20))
         st.plotly_chart(fig_time, use_container_width=True)
 
@@ -852,9 +862,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
