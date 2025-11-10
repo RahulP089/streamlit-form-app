@@ -363,7 +363,8 @@ def show_permit_form(sheet):
         "Structure cutting",
         "Bolt Torquing",
         "Surface Prepration",
-        "Survey"
+        "Survey",
+        "Foundation Installation"
     ]
 
     with st.form("permit_form", clear_on_submit=True):
@@ -865,5 +866,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
