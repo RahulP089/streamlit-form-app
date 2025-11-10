@@ -326,7 +326,6 @@ def show_permit_form(sheet):
         "REYNANTE CAYUMO AMOYO", "JAY MARASIGAN BONDOC", "SHAHWAZ KHAN","PACIFICO LUBANG ICHON","ELMER","REMY E PORRAS"
     ]
     
-    # -------------------- START: MODIFIED SECTION --------------------
     # List of activities provided by the user
     PERMIT_ACTIVITIES = [
         "--- Select Activity ---",
@@ -365,7 +364,6 @@ def show_permit_form(sheet):
         "Bolt Torquing",
         "Surface Prepration"
     ]
-    # -------------------- END: MODIFIED SECTION --------------------
 
     with st.form("permit_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
@@ -377,15 +375,17 @@ def show_permit_form(sheet):
             work_location = st.selectbox("Work Location", WORK_LOCATIONS)
             permit_receiver = st.selectbox("Permit Receiver", PERMIT_RECEIVERS)
 
+        # -------------------- START: MODIFIED SECTION --------------------
         with col2:
             permit_no = st.text_input("Permit No")
-            permit_type = st.selectbox("Type of Permit", PERMIT_TYPES)
-            permit_issuer = st.selectbox("Permit Issuer", PERMIT_ISSUERS)
+            # Changed from st.selectbox to st.radio
+            permit_type = st.radio("Type of Permit", PERMIT_TYPES, horizontal=True)
+            # Changed from st.selectbox to st.radio
+            permit_issuer = st.radio("Permit Issuer", PERMIT_ISSUERS, horizontal=True)
+        # -------------------- END: MODIFIED SECTION ----------------------
 
-        # -------------------- START: MODIFIED SECTION --------------------
         # Replaced st.text_area with st.selectbox
         activity = st.selectbox("Activity", PERMIT_ACTIVITIES)
-        # -------------------- END: MODIFIED SECTION --------------------
 
 
         if st.form_submit_button("Submit"):
@@ -665,7 +665,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         fig_time.update_traces(
             fill='tozeroy',  # This fills the area down to the y=0 line
             fillcolor='rgba(220, 240, 220, 0.7)', # A light, semi-transparent green fill
-            line=dict(color='rgba(34, 139, 34, 1)')   # A solid, dark green line (ForestGreen)
+            line=dict(color='rgba(34, 139, 34, 1)')    # A solid, dark green line (ForestGreen)
         )
         
         fig_time.update_layout(margin=dict(l=20, r=20, t=30, b=20))
@@ -864,5 +864,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
