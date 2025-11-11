@@ -464,6 +464,217 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         "📋 Observation", "🛠️ Permit", "🚜 Heavy Equipment", "🚚 Heavy Vehicle"
     ])
 
+    # -------------------- START: NEW OBSERVATION TAB --------------------
+    with tab_obs:
+        st.subheader("Advanced Observation Analytics")
+        try:
+            df_obs = pd.DataFrame(obs_sheet.get_all_records())
+            # Ensure column names are consistent and uppercase for easier access
+            df_obs.columns = [str(col).strip().upper() for col in df_obs.columns]
+        except gspread.exceptions.GSpreadException as e:
+            st.error(f"Could not load observation data from Google Sheets: {e}")
+            return # Use return to stop execution of this tab only
+
+        if df_obs.empty:
+            st.info("No observation data available to display.")
+            return # Use return to stop execution of this tab only
+
+        # --- Data Cleaning and Preparation ---
+        if 'DATE' not in df_obs.columns:
+            st.warning("The 'DATE' column is missing from the Observation Log sheet.")
+            return # Use return to stop execution of this tab only
+
+        df_obs['DATE'] = pd.to_datetime(df_obs['DATE'], errors='coerce')
+        df_obs.dropna(subset=['DATE'], inplace=True)
+        df_obs = df_obs.sort_values(by='DATE', ascending=False)
+        
+        # --- Clean key categorical columns ---
+        if 'CLASSIFICATION' in df_obs.columns:
+             df_obs['CLASSIFICATION'] = df_obs['CLASSIFICATION'].str.strip().str.upper()
+        if 'STATUS' in df_obs.columns:
+             df_obs['STATUS'] = df_obs['STATUS'].str.strip().str.capitalize() # e.g., "Open", "Closed"
+
+
+        # --- Interactive Filters ---
+        st.markdown("#### Filter & Explore")
+        with st.expander("Adjust Filters", expanded=True):
+            col_filter1_obs, col_filter2_obs = st.columns(2)
+
+            with col_filter1_obs:
+                min_date_obs = df_obs['DATE'].min().date()
+                max_date_obs = df_obs['DATE'].max().date()
+                date_range_obs = st.date_input(
+                    "Select Date Range",
+                    (min_date_obs, max_date_obs),
+                    min_value=min_date_obs,
+                    max_value=max_date_obs,
+                    key="obs_date_range"
+                )
+
+            with col_filter2_obs:
+                # Check if columns exist before creating filters
+                class_options = df_obs['CLASSIFICATION'].unique() if 'CLASSIFICATION' in df_obs.columns else []
+                selected_class = st.multiselect("Filter by Classification", options=class_options, default=class_options)
+
+                status_options = df_obs['STATUS'].unique() if 'STATUS' in df_obs.columns else []
+                selected_status = st.multiselect("Filter by Status", options=status_options, default=status_options)
+
+        # --- Apply Filters to DataFrame ---
+        start_date_obs, end_date_obs = date_range_obs if len(date_range_obs) == 2 else (min_date_obs, max_date_obs)
+        start_datetime_obs = pd.to_datetime(start_date_obs)
+        end_datetime_obs = pd.to_datetime(end_date_obs)
+
+        # Create a boolean mask for each filter
+        mask_obs = (df_obs['DATE'] >= start_datetime_obs) & (df_obs['DATE'] <= end_datetime_obs)
+        if selected_class and 'CLASSIFICATION' in df_obs.columns:
+            mask_obs &= df_obs['CLASSIFICATION'].isin(selected_class)
+        if selected_status and 'STATUS' in df_obs.columns:
+            mask_obs &= df_obs['STATUS'].isin(selected_status)
+
+        df_filtered_obs = df_obs[mask_obs]
+
+        if df_filtered_obs.empty:
+            st.warning("No data matches the selected filters.")
+            return # Use return to stop execution of this tab only
+
+        # --- High-Level KPIs ---
+        st.markdown("---")
+        st.markdown("#### Key Metrics Overview")
+
+        total_obs = len(df_filtered_obs)
+        open_issues = 0
+        if 'STATUS' in df_filtered_obs.columns:
+            open_issues = df_filtered_obs[df_filtered_obs['STATUS'] == 'Open'].shape[0]
+
+        total_unsafe = 0
+        if 'CLASSIFICATION' in df_filtered_obs.columns:
+            total_unsafe = df_filtered_obs[df_filtered_obs['CLASSIFICATION'].isin(['UNSAFE ACT', 'UNSAFE CONDITION'])].shape[0]
+
+        busiest_day_obs = df_filtered_obs['DATE'].dt.day_name().mode()[0] if not df_filtered_obs.empty else "N/A"
+
+        kpi1_obs, kpi2_obs, kpi3_obs, kpi4_obs = st.columns(4)
+        kpi1_obs.metric("Total Observations", f"{total_obs}")
+        kpi2_obs.metric("Open Issues", f"{open_issues}")
+        kpi3_obs.metric("Total Unsafe (Acts + Cond.)", f"{total_unsafe}")
+        kpi4_obs.metric("Busiest Day", busiest_day_obs)
+        st.markdown("---")
+
+        # --- Visualizations ---
+        st.markdown("#### Visual Insights")
+        col_viz1_obs, col_viz2_obs = st.columns(2)
+
+        with col_viz1_obs:
+            if 'CLASSIFICATION' in df_filtered_obs.columns:
+                st.write("**Observation Classification**")
+                # Define colors for safety-related charts
+                color_map = {'UNSAFE ACT': '#E74C3C', 'UNSAFE CONDITION': '#F39C12', 'POSITIVE': '#2ECC71'}
+                
+                class_counts = df_filtered_obs['CLASSIFICATION'].value_counts().reset_index()
+                
+                fig_class_pie = px.pie(
+                    class_counts, 
+                    values='count', 
+                    names='CLASSIFICATION', 
+                    hole=0.4,
+                    color='CLASSIFICATION', # Use the column for color mapping
+                    color_discrete_map=color_map # Apply the defined colors
+                )
+                fig_class_pie.update_traces(textposition='inside', textinfo='percent+label')
+                fig_class_pie.update_layout(showlegend=False, margin=dict(l=10, r=10, t=30, b=10))
+                st.plotly_chart(fig_class_pie, use_container_width=True)
+
+            if 'CATEGORY' in df_filtered_obs.columns:
+                st.write("**Top 10 Observation Categories**")
+                cat_counts = df_filtered_obs['CATEGORY'].value_counts().nlargest(10).reset_index()
+                fig_cat_bar = px.bar(
+                    cat_counts,
+                    y='CATEGORY', x='count', orientation='h', text_auto=True,
+                    labels={'count': 'Count', 'CATEGORY': 'Category'}
+                )
+                fig_cat_bar.update_layout(yaxis={'categoryorder':'total ascending'}, margin=dict(l=20, r=20, t=30, b=20))
+                st.plotly_chart(fig_cat_bar, use_container_width=True)
+
+
+        with col_viz2_obs:
+            if 'STATUS' in df_filtered_obs.columns:
+                st.write("**Observation Status**")
+                status_color_map = {'Open': '#E74C3C', 'Closed': '#2ECC71'}
+                status_counts = df_filtered_obs['STATUS'].value_counts().reset_index()
+
+                fig_status_pie = px.pie(
+                    status_counts, 
+                    values='count', 
+                    names='STATUS', 
+                    hole=0.4,
+                    color='STATUS',
+                    color_discrete_map=status_color_map
+                )
+                fig_status_pie.update_traces(textposition='inside', textinfo='percent+label')
+                fig_status_pie.update_layout(showlegend=False, margin=dict(l=10, r=10, t=30, b=10))
+                st.plotly_chart(fig_status_pie, use_container_width=True)
+
+            if 'OBSERVER NAME' in df_filtered_obs.columns:
+                st.write("**Top 10 Observers**")
+                observer_counts = df_filtered_obs['OBSERVER NAME'].value_counts().nlargest(10).reset_index()
+                fig_obs_bar = px.bar(
+                    observer_counts,
+                    y='OBSERVER NAME', x='count', orientation='h', text_auto=True,
+                    labels={'count': 'Count', 'OBSERVER NAME': 'Observer'}
+                )
+                fig_obs_bar.update_layout(yaxis={'categoryorder':'total ascending'}, margin=dict(l=20, r=20, t=30, b=20))
+                st.plotly_chart(fig_obs_bar, use_container_width=True)
+        
+        # --- Time Series Analysis ---
+        st.markdown("---")
+        st.write("#### Observation Trend Over Time")
+        obs_by_day = df_filtered_obs.groupby(df_filtered_obs['DATE'].dt.date).size().reset_index(name='count')
+        
+        fig_time_obs = px.area(
+            obs_by_day, x='DATE', y='count', markers=True,
+            labels={'DATE': 'Date', 'count': 'Number of Observations'}
+        )
+        fig_time_obs.update_layout(margin=dict(l=20, r=20, t=30, b=20))
+        st.plotly_chart(fig_time_obs, use_container_width=True)
+        
+        # --- Supervisor Analysis ---
+        if 'SUPERVISOR NAME' in df_filtered_obs.columns and 'CLASSIFICATION' in df_filtered_obs.columns:
+            st.write("#### Unsafe Observations by Supervisor")
+            # Filter for only unsafe observations
+            df_unsafe = df_filtered_obs[df_filtered_obs['CLASSIFICATION'].isin(['UNSAFE ACT', 'UNSAFE CONDITION'])]
+            
+            if not df_unsafe.empty:
+                # Group by supervisor and the type of unsafe observation
+                unsafe_counts = df_unsafe.groupby(['SUPERVISOR NAME', 'CLASSIFICATION']).size().reset_index(name='count')
+                
+                # Get top 15 supervisors by total unsafe count to avoid clutter
+                top_supervisors = df_unsafe['SUPERVISOR NAME'].value_counts().nlargest(15).index
+                unsafe_counts_top = unsafe_counts[unsafe_counts['SUPERVISOR NAME'].isin(top_supervisors)]
+
+                fig_sup_bar = px.bar(
+                    unsafe_counts_top,
+                    x='SUPERVISOR NAME',
+                    y='count',
+                    color='CLASSIFICATION',
+                    title="Unsafe Acts/Conditions by Supervisor (Top 15)",
+                    barmode='stack',
+                    labels={'count': 'Total Unsafe Observations', 'SUPERVISOR NAME': 'Supervisor', 'CLASSIFICATION': 'Type'},
+                    color_discrete_map=color_map # Use the same safety colors
+                )
+                fig_sup_bar.update_layout(xaxis_tickangle=-45)
+                st.plotly_chart(fig_sup_bar, use_container_width=True)
+            else:
+                st.info("No 'Unsafe Act' or 'Unsafe Condition' observations found in the selected filter range.")
+
+
+        # --- Full Data Table ---
+        st.markdown("---")
+        st.markdown("#### Detailed Observation Log (Filtered)")
+        df_display_obs = df_filtered_obs.copy()
+        df_display_obs['DATE'] = df_display_obs['DATE'].dt.strftime('%d-%b-%Y')
+        st.dataframe(df_display_obs, use_container_width=True, hide_index=True)
+
+    # -------------------- END: NEW OBSERVATION TAB --------------------
+
     with tab_permit:
         st.subheader("Advanced Permit Log Analytics")
         try:
@@ -588,7 +799,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                     site_permit_counts, 
                     x='DRILL SITE', 
                     y='count', 
-                    color='TYPE OF PERMIT',  # This creates the stack
+                    color='TYPE OF PERMIT', # This creates the stack
                     title="Permit Type Breakdown per Site",
                     text_auto=True,
                     labels={
@@ -665,7 +876,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         
         # 2. Added update_traces to match the style of your example image
         fig_time.update_traces(
-            fill='tozeroy',  # This fills the area down to the y=0 line
+            fill='tozeroy', # This fills the area down to the y=0 line
             fillcolor='rgba(220, 240, 220, 0.7)', # A light, semi-transparent green fill
             line=dict(color='rgba(34, 139, 34, 1)')    # A solid, dark green line (ForestGreen)
         )
@@ -817,11 +1028,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         
         st.dataframe(df_display_eq, use_container_width=True)
 
-    with tab_obs:
-        st.subheader("Observation Analytics")
-        st.info("Observation dashboard is under construction.")
-        # Placeholder for observation analytics
-
     with tab_veh:
         st.subheader("Heavy Vehicle Analytics")
         st.info("Heavy Vehicle dashboard is under construction.")
@@ -866,6 +1072,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
