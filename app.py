@@ -272,7 +272,7 @@ def show_observation_form(sheet):
             supervisor_name = st.selectbox("Supervisor Name", supervisor_names)
             trade = SUPERVISOR_TRADE_MAP.get(supervisor_name, "")
             discipline = st.text_input("Discipline", value=trade, disabled=True)
-            status = st.selectbox("Status", ["Open", "Closed"])
+            status = st.selectbox("Status", ["OPEN", "CLOSE"])
         
         obs_details = st.text_area("Observation Details")
         rec_action = st.text_area("Recommended Action")
@@ -544,7 +544,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         total_obs = len(df_filtered_obs)
         open_issues = 0
         if 'STATUS' in df_filtered_obs.columns:
-            open_issues = df_filtered_obs[df_filtered_obs['STATUS'] == 'Open'].shape[0]
+            open_issues = df_filtered_obs[df_filtered_obs['STATUS'] == 'OPEN'].shape[0]
 
         total_unsafe = 0
         if 'CLASSIFICATION' in df_filtered_obs.columns:
@@ -598,7 +598,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         with col_viz2_obs:
             if 'STATUS' in df_filtered_obs.columns:
                 st.write("**Observation Status**")
-                status_color_map = {'Open': '#E74C3C', 'Closed': '#2ECC71'}
+                status_color_map = {'Open': '#E74C3C', 'CLOSE': '#2ECC71'}
                 status_counts = df_filtered_obs['STATUS'].value_counts().reset_index()
 
                 fig_status_pie = px.pie(
@@ -1072,3 +1072,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
