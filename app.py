@@ -196,7 +196,7 @@ def show_observation_form(sheet):
         "AJISH", "AKHIL MOHAN", "AQIB", "ARFAN", "ASIM", "ASHRAF KHAN", "BIJO",
         "FELIN", "HABEEB", "ILYAS", "IRFAN", "JAMALI", "JOSEPH CRUZ", "MOHSIN",
         "PRADEEP", "RAJSHEKAR", "RICKEN", "SHIVA KANNAN", "SHIVA SUBRAMANIYAM",
-        "SUDHEESH", "VAISHAK", "VARGHEESE", "WALI ALAM", "ZAHEER"
+        "SUDISH", "VAISHAK", "VARGHEESE", "WALI ALAM", "ZAHEER"
     ]
     
     AREAS = [
@@ -1072,4 +1072,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
