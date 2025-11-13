@@ -23,7 +23,7 @@ HEAVY_VEHICLE_TAB = "Heavy Vehicles"
 
 # --- MASTER SITE LIST ---
 ALL_SITES = [
-    "1858", "1969", "1972", "2433", "2447", "2485", 
+    "1858", "1969", "1972", "2433", "2447", "2485",
     "2534", "2549", "2553", "2556", "2566","2570","HRDH Laydown","2595"
 ]
 # ------------------------
@@ -109,17 +109,29 @@ def get_sheets():
 def login():
     
     # --- START: ROBUST BACKGROUND IMAGE CODE ---
-    # Get the absolute path to the directory containing this script
     try:
+        # Get the absolute path to the directory containing this script
         APP_DIR = os.path.dirname(os.path.abspath(__file__))
     except NameError:
-        APP_DIR = os.path.abspath(".") # Fallback for environments where __file__ is not set
+        # Fallback for environments where __file__ is not set (like notebooks)
+        APP_DIR = os.path.abspath(".")
         
     # Join the app directory path with the image file name
     IMG_PATH = os.path.join(APP_DIR, "login_bg.jpg")
 
-    img_base64 = get_img_as_base64(IMG_PATH) 
-    # --- END: ROBUST BACKGROUND IMAGE CODE ---
+    # --- START: NEW DEBUGGING ---
+    st.write(f"ℹ️ *App directory is: `{APP_DIR}`*")
+    st.write(f"ℹ️ *Looking for image at: `{IMG_PATH}`*")
+    
+    if not os.path.exists(IMG_PATH):
+        st.error("🚨 Background Image Not Found! 🚨")
+        st.error(f"Make sure you have a file named `login_bg.jpg` in this exact folder:")
+        st.error(APP_DIR)
+        img_base64 = None
+    else:
+        st.success("✅ Background image found!")
+        img_base64 = get_img_as_base64(IMG_PATH)
+    # --- END: NEW DEBUGGING ---
     
     background_css = ""
     if img_base64:
@@ -137,11 +149,11 @@ def login():
         """
 
     st.markdown(f"""
-    {background_css} 
+    {background_css}
     <style>
     .login-container {{
         max-width: 400px; margin: 4rem auto; padding: 2rem;
-        border-radius: 12px; 
+        border-radius: 12px;
         
         /* --- "Glass" effect --- */
         background-color: rgba(255, 255, 255, 0.85);
@@ -158,8 +170,7 @@ def login():
     </style>
     """, unsafe_allow_html=True)
 
-    # --- HTML TYPO FIX: Changed class.login-container" to class="login-container" ---
-    st.markdown('<div class="login-container">', unsafe_allow_html=True) 
+    st.markdown('<div class="login-container">', unsafe_allow_html=True)
     st.markdown('<div class="login-title">🛡️ Login</div>', unsafe_allow_html=True)
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
@@ -248,7 +259,7 @@ def show_observation_form(sheet):
     ]
     
     AREAS = [
-        "Well Head", "Flow Line", "OHPL", "Tie In", 
+        "Well Head", "Flow Line", "OHPL", "Tie In",
         "Lay Down", "Cellar", "Remote Header"
     ]
 
@@ -485,10 +496,10 @@ def show_heavy_vehicle_form(sheet):
 
         if st.form_submit_button("Submit"):
             data = [
-                vehicle_type, make, plate_no, asset_code, owner, 
+                vehicle_type, make, plate_no, asset_code, owner,
                 mvpi_expiry, insurance_expiry,
                 driver_name, iqama_no, licence_expiry,
-                qr_code, fa_box, 
+                qr_code, fa_box,
                 pwas_status, seatbelt_damaged, tyre_condition,
                 suspension_systems, remarks
             ]
@@ -611,9 +622,9 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 class_counts = df_filtered_obs['CLASSIFICATION'].value_counts().reset_index()
                 
                 fig_class_pie = px.pie(
-                    class_counts, 
-                    values='count', 
-                    names='CLASSIFICATION', 
+                    class_counts,
+                    values='count',
+                    names='CLASSIFICATION',
                     hole=0.4,
                     color='CLASSIFICATION',
                     color_discrete_map=color_map
@@ -640,9 +651,9 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 status_counts = df_filtered_obs['STATUS'].value_counts().reset_index()
 
                 fig_status_pie = px.pie(
-                    status_counts, 
-                    values='count', 
-                    names='STATUS', 
+                    status_counts,
+                    values='count',
+                    names='STATUS',
                     hole=0.4,
                     color='STATUS',
                     color_discrete_map=status_color_map
@@ -818,15 +829,15 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 site_permit_counts = site_permit_counts.dropna(subset=['DRILL SITE'])
 
                 fig_site_stacked = px.bar(
-                    site_permit_counts, 
-                    x='DRILL SITE', 
-                    y='count', 
+                    site_permit_counts,
+                    x='DRILL SITE',
+                    y='count',
                     color='TYPE OF PERMIT',
                     title="Permit Type Breakdown per Site",
                     text_auto=True,
                     labels={
-                        'count': 'Total Permits', 
-                        'DRILL SITE': 'Drill Site', 
+                        'count': 'Total Permits',
+                        'DRILL SITE': 'Drill Site',
                         'TYPE OF PERMIT': 'Permit Type'
                     }
                 )
@@ -936,9 +947,9 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             st.warning("Could not generate alerts. Key identifier or date columns are missing from the sheet.")
         else:
             df_long_eq = df_equip.melt(
-                id_vars=existing_id_cols_eq, 
-                value_vars=existing_date_cols_eq, 
-                var_name="Document Type", 
+                id_vars=existing_id_cols_eq,
+                value_vars=existing_date_cols_eq,
+                var_name="Document Type",
                 value_name="Expiry Date"
             )
 
@@ -957,7 +968,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 df_alerts_eq = df_alerts_eq.sort_values(by=["Status", "Expiry Date"])
                 
                 display_cols_eq = [
-                    "EQUIPMENT TYPE", "PALTE NO.", "Document Type", 
+                    "EQUIPMENT TYPE", "PALTE NO.", "Document Type",
                     "Expiry Date", "Status", "OPERATOR NAME", "OWNER"
                 ]
                 
@@ -992,7 +1003,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                     df_equip['EQUIPMENT TYPE'].value_counts().reset_index(),
                     x='EQUIPMENT TYPE', y='count', title='Equipment Distribution by Type',
                     labels={'count': 'Number of Units', 'EQUIPMENT TYPE': 'Type'},
-                    text_auto=True 
+                    text_auto=True
                 )
                 fig_type_eq.update_layout(xaxis_tickangle=-45)
                 st.plotly_chart(fig_type_eq, use_container_width=True)
@@ -1083,9 +1094,9 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             st.warning("Could not generate alerts. Key identifier or date columns are missing from the sheet.")
         else:
             df_long_veh = df_filtered_veh.melt(
-                id_vars=existing_id_cols_veh, 
-                value_vars=existing_date_cols_veh, 
-                var_name="Document Type", 
+                id_vars=existing_id_cols_veh,
+                value_vars=existing_date_cols_veh,
+                var_name="Document Type",
                 value_name="Expiry Date"
             )
             df_long_veh.dropna(subset=['Expiry Date'], inplace=True)
@@ -1131,7 +1142,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                     df_filtered_veh['VEHICLE TYPE'].value_counts().reset_index(),
                     x='VEHICLE TYPE', y='count', title='Vehicle Distribution by Type',
                     labels={'count': 'Number of Units', 'VEHICLE TYPE': 'Type'},
-                    text_auto=True 
+                    text_auto=True
                 )
                 fig_type_veh.update_layout(xaxis_tickangle=-45)
                 st.plotly_chart(fig_type_veh, use_container_width=True)
