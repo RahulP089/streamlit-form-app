@@ -4,6 +4,8 @@ import gspread
 from google.oauth2 import service_account
 from datetime import date, datetime, timedelta
 import plotly.express as px
+import base64  # Added for image encoding
+import os      # Added for file path checking
 
 # -------------------- USER LOGIN --------------------
 USER_CREDENTIALS = {
@@ -27,6 +29,15 @@ ALL_SITES = [
 # ------------------------
 
 # -------------------- UTILITIES --------------------
+def get_img_as_base64(file):
+    """Reads an image file and returns it as a base64 encoded string."""
+    if not os.path.exists(file):
+        # st.error(f"Cannot find image file: {file}") # Optional: show error
+        return None
+    with open(file, "rb") as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
+
 def parse_date(s):
     """Safely parses a string into a date object, trying multiple formats."""
     if isinstance(s, (date, datetime)):
@@ -39,7 +50,7 @@ def parse_date(s):
             continue
     return None
 
-def badge_expiry(d, expiry_days=30): # <--- MODIFIED
+def badge_expiry(d, expiry_days=30):
     """Creates a visual badge for expiry dates."""
     if d is None:
         return "⚪ Not Set"
@@ -96,21 +107,59 @@ def get_sheets():
 
 # -------------------- LOGIN PAGE --------------------
 def login():
-    st.markdown("""
+    
+    # --- START: ROBUST BACKGROUND IMAGE CODE ---
+    # Get the absolute path to the directory containing this script
+    try:
+        APP_DIR = os.path.dirname(os.path.abspath(__file__))
+    except NameError:
+        APP_DIR = os.path.abspath(".") # Fallback for environments where __file__ is not set
+        
+    # Join the app directory path with the image file name
+    IMG_PATH = os.path.join(APP_DIR, "login_bg.jpg")
+
+    img_base64 = get_img_as_base64(IMG_PATH) 
+    # --- END: ROBUST BACKGROUND IMAGE CODE ---
+    
+    background_css = ""
+    if img_base64:
+        # Create the CSS for the background
+        background_css = f"""
+        <style>
+        [data-testid="stAppViewContainer"] > .main {{
+            background-image: url("data:image/jpg;base64,{img_base64}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }}
+        </style>
+        """
+
+    st.markdown(f"""
+    {background_css} 
     <style>
-    .login-container {
+    .login-container {{
         max-width: 400px; margin: 4rem auto; padding: 2rem;
-        border-radius: 12px; background-color: white;
+        border-radius: 12px; 
+        
+        /* --- "Glass" effect --- */
+        background-color: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        
         box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
         text-align: center;
-    }
-    .login-title {
+    }}
+    .login-title {{
         font-size: 32px; font-weight:700; color:#2c3e50;
         margin-bottom:1.5rem;
-    }
+    }}
     </style>
     """, unsafe_allow_html=True)
-    st.markdown('<div class="login-container">', unsafe_allow_html=True)
+
+    # --- HTML TYPO FIX: Changed class.login-container" to class="login-container" ---
+    st.markdown('<div class="login-container">', unsafe_allow_html=True) 
     st.markdown('<div class="login-title">🛡️ Login</div>', unsafe_allow_html=True)
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
@@ -190,7 +239,6 @@ def show_equipment_form(sheet):
 #--------------------------------------------------------------- HSE OBSERVATION FORM-----------------------------------------------------------------------------------------------
 def show_observation_form(sheet):
     st.header("📋 Daily HSE Site Observation Entry Form")
-    # Note: well_numbers list was removed and replaced with ALL_SITES from top of file
     
     OBSERVER_NAMES = [
         "AJISH", "AKHIL MOHAN", "AQIB", "ARFAN", "ASIM", "ASHRAF KHAN", "BIJO",
@@ -267,7 +315,6 @@ def show_observation_form(sheet):
             category = st.selectbox("Category", CATEGORIES)
             
         with col2:
-            # --- MODIFIED LINE ---
             well_no = st.selectbox("Well No", ALL_SITES) # Uses the master ALL_SITES list
             supervisor_name = st.selectbox("Supervisor Name", supervisor_names)
             trade = SUPERVISOR_TRADE_MAP.get(supervisor_name, "")
@@ -300,8 +347,6 @@ def show_observation_form(sheet):
 def show_permit_form(sheet):
     st.header("🛠️ Daily Internal Permit Log")
     
-    # Note: DRILL_SITES list was removed and replaced with ALL_SITES from top of file
-    
     WORK_LOCATIONS = [
         "Well Head", "OHPL", "E&I Skid", "Burn Pit", "Cellar",
         "Flow Line", "Lay down", "CP area","BD-Line"
@@ -326,7 +371,6 @@ def show_permit_form(sheet):
         "REYNANTE CAYUMO AMOYO", "JAY MARASIGAN BONDOC", "SHAHWAZ KHAN","PACIFICO LUBANG ICHON","ELMER","REMY E PORRAS"
     ]
     
-    # List of activities provided by the user
     PERMIT_ACTIVITIES = [
         "--- Select Activity ---",
         "Mechanical Excavation",
@@ -369,7 +413,7 @@ def show_permit_form(sheet):
         "Pipe Lowering"
         "Sand Bedding",
         "Radiography test",
-        "Splicing"
+        "Splicing "
     ]
 
     with st.form("permit_form", clear_on_submit=True):
@@ -377,23 +421,16 @@ def show_permit_form(sheet):
         
         with col1:
             date_val = st.date_input("Date")
-            # --- MODIFIED LINE ---
             drill_site = st.selectbox("Drill Site", ALL_SITES) # Uses the master ALL_SITES list
             work_location = st.selectbox("Work Location", WORK_LOCATIONS)
             permit_receiver = st.selectbox("Permit Receiver", PERMIT_RECEIVERS)
 
-        # -------------------- START: MODIFIED SECTION --------------------
         with col2:
             permit_no = st.text_input("Permit No")
-            # Changed from st.selectbox to st.radio
             permit_type = st.radio("Type of Permit", PERMIT_TYPES, horizontal=True)
-            # Changed from st.selectbox to st.radio
             permit_issuer = st.radio("Permit Issuer", PERMIT_ISSUERS, horizontal=True)
-        # -------------------- END: MODIFIED SECTION ----------------------
 
-        # Replaced st.text_area with st.selectbox
         activity = st.selectbox("Activity", PERMIT_ACTIVITIES)
-
 
         if st.form_submit_button("Submit"):
             data = [
@@ -435,7 +472,6 @@ def show_heavy_vehicle_form(sheet):
         mvpi_expiry = d1.date_input("MVPI Expiry date").strftime(date_format)
         insurance_expiry = d2.date_input("Insurance Expiry").strftime(date_format)
         licence_expiry = d1.date_input("Licence Expiry").strftime(date_format)
-        # fire_ext_tp_expiry = d2.date_input("Fire Extinguisher T.P Expiry").strftime(date_format)
 
         st.subheader("Condition & Status")
         s1, s2 = st.columns(2)
@@ -469,12 +505,14 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         "📋 Observation", "🛠️ Permit", "🚜 Heavy Equipment", "🚚 Heavy Vehicle"
     ])
 
-    # -------------------- START: NEW OBSERVATION TAB --------------------
+    today = date.today()
+    thirty_days = today + timedelta(days=30)
+
+    # -------------------- OBSERVATION TAB --------------------
     with tab_obs:
         st.subheader("Advanced Observation Analytics")
         try:
             df_obs = pd.DataFrame(obs_sheet.get_all_records())
-            # Ensure column names are consistent and uppercase for easier access
             df_obs.columns = [str(col).strip().upper() for col in df_obs.columns]
         except gspread.exceptions.GSpreadException as e:
             st.error(f"Could not load observation data from Google Sheets: {e}")
@@ -482,22 +520,21 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
 
         if df_obs.empty:
             st.info("No observation data available to display.")
-            return # Use return to stop execution of this tab only
+            return
 
         # --- Data Cleaning and Preparation ---
         if 'DATE' not in df_obs.columns:
             st.warning("The 'DATE' column is missing from the Observation Log sheet.")
-            return # Use return to stop execution of this tab only
+            return
 
         df_obs['DATE'] = pd.to_datetime(df_obs['DATE'], errors='coerce')
         df_obs.dropna(subset=['DATE'], inplace=True)
         df_obs = df_obs.sort_values(by='DATE', ascending=False)
         
-        # --- Clean key categorical columns ---
         if 'CLASSIFICATION' in df_obs.columns:
              df_obs['CLASSIFICATION'] = df_obs['CLASSIFICATION'].str.strip().str.upper()
         if 'STATUS' in df_obs.columns:
-             df_obs['STATUS'] = df_obs['STATUS'].str.strip().str.capitalize() # e.g., "Open", "Closed"
+             df_obs['STATUS'] = df_obs['STATUS'].str.strip().str.capitalize()
 
 
         # --- Interactive Filters ---
@@ -517,7 +554,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 )
 
             with col_filter2_obs:
-                # Check if columns exist before creating filters
                 class_options = df_obs['CLASSIFICATION'].unique() if 'CLASSIFICATION' in df_obs.columns else []
                 selected_class = st.multiselect("Filter by Classification", options=class_options, default=class_options)
 
@@ -529,7 +565,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         start_datetime_obs = pd.to_datetime(start_date_obs)
         end_datetime_obs = pd.to_datetime(end_date_obs)
 
-        # Create a boolean mask for each filter
         mask_obs = (df_obs['DATE'] >= start_datetime_obs) & (df_obs['DATE'] <= end_datetime_obs)
         if selected_class and 'CLASSIFICATION' in df_obs.columns:
             mask_obs &= df_obs['CLASSIFICATION'].isin(selected_class)
@@ -540,7 +575,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
 
         if df_filtered_obs.empty:
             st.warning("No data matches the selected filters.")
-            return # Use return to stop execution of this tab only
+            return
 
         # --- High-Level KPIs ---
         st.markdown("---")
@@ -549,7 +584,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         total_obs = len(df_filtered_obs)
         open_issues = 0
         if 'STATUS' in df_filtered_obs.columns:
-            open_issues = df_filtered_obs[df_filtered_obs['STATUS'] == 'OPEN'].shape[0]
+            open_issues = df_filtered_obs[df_filtered_obs['STATUS'] == 'Open'].shape[0]
 
         total_unsafe = 0
         if 'CLASSIFICATION' in df_filtered_obs.columns:
@@ -571,7 +606,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         with col_viz1_obs:
             if 'CLASSIFICATION' in df_filtered_obs.columns:
                 st.write("**Observation Classification**")
-                # Define colors for safety-related charts
                 color_map = {'UNSAFE ACT': '#E74C3C', 'UNSAFE CONDITION': '#F39C12', 'POSITIVE': '#2ECC71'}
                 
                 class_counts = df_filtered_obs['CLASSIFICATION'].value_counts().reset_index()
@@ -581,8 +615,8 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                     values='count', 
                     names='CLASSIFICATION', 
                     hole=0.4,
-                    color='CLASSIFICATION', # Use the column for color mapping
-                    color_discrete_map=color_map # Apply the defined colors
+                    color='CLASSIFICATION',
+                    color_discrete_map=color_map
                 )
                 fig_class_pie.update_traces(textposition='inside', textinfo='percent+label')
                 fig_class_pie.update_layout(showlegend=False, margin=dict(l=10, r=10, t=30, b=10))
@@ -599,11 +633,10 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 fig_cat_bar.update_layout(yaxis={'categoryorder':'total ascending'}, margin=dict(l=20, r=20, t=30, b=20))
                 st.plotly_chart(fig_cat_bar, use_container_width=True)
 
-
         with col_viz2_obs:
             if 'STATUS' in df_filtered_obs.columns:
                 st.write("**Observation Status**")
-                status_color_map = {'Open': '#E74C3C', 'CLOSE': '#2ECC71'}
+                status_color_map = {'Open': '#E74C3C', 'Close': '#2ECC71'} # Adjusted "CLOSE" to "Close"
                 status_counts = df_filtered_obs['STATUS'].value_counts().reset_index()
 
                 fig_status_pie = px.pie(
@@ -644,14 +677,11 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         # --- Supervisor Analysis ---
         if 'SUPERVISOR NAME' in df_filtered_obs.columns and 'CLASSIFICATION' in df_filtered_obs.columns:
             st.write("#### Unsafe Observations by Supervisor")
-            # Filter for only unsafe observations
             df_unsafe = df_filtered_obs[df_filtered_obs['CLASSIFICATION'].isin(['UNSAFE ACT', 'UNSAFE CONDITION'])]
             
             if not df_unsafe.empty:
-                # Group by supervisor and the type of unsafe observation
                 unsafe_counts = df_unsafe.groupby(['SUPERVISOR NAME', 'CLASSIFICATION']).size().reset_index(name='count')
                 
-                # Get top 15 supervisors by total unsafe count to avoid clutter
                 top_supervisors = df_unsafe['SUPERVISOR NAME'].value_counts().nlargest(15).index
                 unsafe_counts_top = unsafe_counts[unsafe_counts['SUPERVISOR NAME'].isin(top_supervisors)]
 
@@ -663,7 +693,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                     title="Unsafe Acts/Conditions by Supervisor (Top 15)",
                     barmode='stack',
                     labels={'count': 'Total Unsafe Observations', 'SUPERVISOR NAME': 'Supervisor', 'CLASSIFICATION': 'Type'},
-                    color_discrete_map=color_map # Use the same safety colors
+                    color_discrete_map={'UNSAFE ACT': '#E74C3C', 'UNSAFE CONDITION': '#F39C12'}
                 )
                 fig_sup_bar.update_layout(xaxis_tickangle=-45)
                 st.plotly_chart(fig_sup_bar, use_container_width=True)
@@ -678,13 +708,11 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         df_display_obs['DATE'] = df_display_obs['DATE'].dt.strftime('%d-%b-%Y')
         st.dataframe(df_display_obs, use_container_width=True, hide_index=True)
 
-    # -------------------- END: NEW OBSERVATION TAB --------------------
-
+    # -------------------- PERMIT TAB --------------------
     with tab_permit:
         st.subheader("Advanced Permit Log Analytics")
         try:
             df_permit = pd.DataFrame(permit_sheet.get_all_records())
-            # Ensure column names are consistent and uppercase for easier access
             df_permit.columns = [str(col).strip().upper() for col in df_permit.columns]
         except gspread.exceptions.GSpreadException as e:
             st.error(f"Could not load permit data from Google Sheets: {e}")
@@ -720,7 +748,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 )
 
             with col_filter2:
-                # Check if columns exist before creating filters
                 permit_types = df_permit['TYPE OF PERMIT'].unique() if 'TYPE OF PERMIT' in df_permit.columns else []
                 selected_types = st.multiselect("Filter by Permit Type", options=permit_types, default=permit_types)
 
@@ -728,12 +755,10 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 selected_issuers = st.multiselect("Filter by Permit Issuer", options=issuers, default=issuers)
 
         # --- Apply Filters to DataFrame ---
-        # Handle date range selection for filtering
         start_date, end_date = date_range if len(date_range) == 2 else (min_date, max_date)
         start_datetime = pd.to_datetime(start_date)
         end_datetime = pd.to_datetime(end_date)
 
-        # Create a boolean mask for each filter
         mask = (df_permit['DATE'] >= start_datetime) & (df_permit['DATE'] <= end_datetime)
         if selected_types and 'TYPE OF PERMIT' in df_permit.columns:
             mask &= df_permit['TYPE OF PERMIT'].isin(selected_types)
@@ -780,31 +805,23 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 fig_type_pie.update_layout(showlegend=False, margin=dict(l=10, r=10, t=30, b=10))
                 st.plotly_chart(fig_type_pie, use_container_width=True)
 
-            # -------------------- START: ADVANCED GRAPH (FINAL FIX) --------------------
-            # Check if both columns needed for the stacked bar chart exist
             if 'DRILL SITE' in df_filtered.columns and 'TYPE OF PERMIT' in df_filtered.columns:
                 st.write("**Permit Composition by Drill Site**")
                 
-                # Group by both drill site and permit type to get counts for stacking
                 site_permit_counts = df_filtered.groupby(['DRILL SITE', 'TYPE OF PERMIT']).size().reset_index(name='count')
                 
-                # --- THIS IS THE NEW FIX ---
-                # Convert DRILL SITE to a categorical type based on ALL_SITES
-                # This ensures all sites are present on the axis, in the correct order.
                 site_permit_counts['DRILL SITE'] = pd.Categorical(
                     site_permit_counts['DRILL SITE'],
                     categories=ALL_SITES,
                     ordered=True
                 )
-                # Drop any rows that might not be in our master ALL_SITES list
                 site_permit_counts = site_permit_counts.dropna(subset=['DRILL SITE'])
-                # ---------------------------
 
                 fig_site_stacked = px.bar(
                     site_permit_counts, 
                     x='DRILL SITE', 
                     y='count', 
-                    color='TYPE OF PERMIT', # This creates the stack
+                    color='TYPE OF PERMIT',
                     title="Permit Type Breakdown per Site",
                     text_auto=True,
                     labels={
@@ -814,25 +831,21 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                     }
                 )
                 fig_site_stacked.update_layout(
-                    barmode='stack', # Ensure bars are stacked
-                    margin=dict(l=20, r=20, t=40, b=20) # Adjust top margin for title
+                    barmode='stack',
+                    margin=dict(l=20, r=20, t=40, b=20)
                 )
                 st.plotly_chart(fig_site_stacked, use_container_width=True)
             
-            # Fallback to the simple bar chart if 'TYPE OF PERMIT' column is missing
             elif 'DRILL SITE' in df_filtered.columns:
                 st.write("**Total Permits by Drill Site**")
                 site_counts = df_filtered['DRILL SITE'].value_counts().reset_index()
 
-                # --- APPLY THE SAME FIX HERE ---
-                # Convert to categorical to ensure all sites are shown in order
                 site_counts['DRILL SITE'] = pd.Categorical(
                     site_counts['DRILL SITE'],
                     categories=ALL_SITES,
                     ordered=True
                 )
                 site_counts = site_counts.dropna(subset=['DRILL SITE'])
-                # ---------------------------
 
                 fig_site = px.bar(
                     site_counts, x='DRILL SITE', y='count', text_auto=True,
@@ -841,8 +854,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 )
                 fig_site.update_layout(margin=dict(l=20, r=20, t=40, b=20))
                 st.plotly_chart(fig_site, use_container_width=True)
-            # -------------------- END: ADVANCED GRAPH --------------------
-
 
         with col_viz2:
             if 'PERMIT ISSUER' in df_filtered.columns:
@@ -868,22 +879,20 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 fig_receiver.update_layout(yaxis={'categoryorder':'total ascending'}, margin=dict(l=20, r=20, t=30, b=20))
                 st.plotly_chart(fig_receiver, use_container_width=True)
                 
-        # --- Time Series Analysis (MODIFIED) ---
+        # --- Time Series Analysis ---
         st.markdown("---")
         st.write("#### Permit Trend Over Time")
         permits_by_day = df_filtered.groupby(df_filtered['DATE'].dt.date).size().reset_index(name='count')
         
-        # 1. Changed from px.line to px.area
         fig_time = px.area(
             permits_by_day, x='DATE', y='count', markers=True,
             labels={'DATE': 'Date', 'count': 'Number of Permits'}
         )
         
-        # 2. Added update_traces to match the style of your example image
         fig_time.update_traces(
-            fill='tozeroy', # This fills the area down to the y=0 line
-            fillcolor='rgba(220, 240, 220, 0.7)', # A light, semi-transparent green fill
-            line=dict(color='rgba(34, 139, 34, 1)')    # A solid, dark green line (ForestGreen)
+            fill='tozeroy',
+            fillcolor='rgba(220, 240, 220, 0.7)',
+            line=dict(color='rgba(34, 139, 34, 1)')
         )
         
         fig_time.update_layout(margin=dict(l=20, r=20, t=30, b=20))
@@ -894,12 +903,14 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         st.markdown("#### Detailed Permit Log (Filtered)")
         df_display_permit = df_filtered.copy()
         df_display_permit['DATE'] = df_display_permit['DATE'].dt.strftime('%d-%b-%Y')
-        st.dataframe(df_display_permit, use_container_width=True)
+        st.dataframe(df_display_permit, use_container_width=True, hide_index=True)
 
+    # -------------------- HEAVY EQUIPMENT TAB --------------------
     with tab_eqp:
-        st.subheader("Heavy Equipment Analytics")
+        st.subheader("🚜 Heavy Equipment Analytics")
         try:
             df_equip = pd.DataFrame(heavy_equip_sheet.get_all_records())
+            df_equip.columns = [str(col).strip().upper() for col in df_equip.columns]
         except gspread.exceptions.GSpreadException as e:
             st.error(f"Could not load data from Google Sheets: {e}")
             return
@@ -908,70 +919,52 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             st.info("No Heavy Equipment data available to display.")
             return
 
-        date_cols = ["T.P Expiry date", "Insurance expiry date", "T.P Card expiry date", "F.E TP expiry"]
-        for col in date_cols:
+        date_cols_eq = ["T.P EXPIRY DATE", "INSURANCE EXPIRY DATE", "T.P CARD EXPIRY DATE", "F.E TP EXPIRY"]
+        for col in date_cols_eq:
                 if col in df_equip.columns:
                         df_equip[col] = df_equip[col].apply(parse_date)
 
-        today = date.today()
-        thirty_days = today + timedelta(days=30) # <--- MODIFIED
-
-        # -------------------- EXPIRY TRACKING TABLE --------------------
+        # --- EXPIRY TRACKING TABLE ---
         st.subheader("🚨 Equipment Document Expiry Alerts")
 
-        # Define columns to identify the equipment and columns to check for expiry
-        id_cols = ["Equipment type", "Palte No.", "Owner", "Operator Name"]
+        id_cols_eq = ["EQUIPMENT TYPE", "PALTE NO.", "OWNER", "OPERATOR NAME"]
         
-        # Filter to only include columns that actually exist in the sheet
-        existing_id_cols = [c for c in id_cols if c in df_equip.columns]
-        existing_date_cols = [c for c in date_cols if c in df_equip.columns]
+        existing_id_cols_eq = [c for c in id_cols_eq if c in df_equip.columns]
+        existing_date_cols_eq = [c for c in date_cols_eq if c in df_equip.columns]
 
-        if not existing_date_cols or not existing_id_cols:
+        if not existing_date_cols_eq or not existing_id_cols_eq:
             st.warning("Could not generate alerts. Key identifier or date columns are missing from the sheet.")
         else:
-            # Melt the DataFrame to turn date columns into rows
-            df_long = df_equip.melt(
-                id_vars=existing_id_cols, 
-                value_vars=existing_date_cols, 
+            df_long_eq = df_equip.melt(
+                id_vars=existing_id_cols_eq, 
+                value_vars=existing_date_cols_eq, 
                 var_name="Document Type", 
                 value_name="Expiry Date"
             )
 
-            # Remove items where the date was never set
-            df_long.dropna(subset=['Expiry Date'], inplace=True)
+            df_long_eq.dropna(subset=['Expiry Date'], inplace=True)
+            df_alerts_eq = df_long_eq[df_long_eq['Expiry Date'] <= thirty_days].copy()
 
-            # Filter for items that are expired or expiring within 30 days
-            df_alerts = df_long[df_long['Expiry Date'] <= thirty_days].copy() # <--- MODIFIED
-
-            if df_alerts.empty:
-                st.success("✅ No documents are expired or expiring within 30 days.") # <--- MODIFIED
+            if df_alerts_eq.empty:
+                st.success("✅ No equipment documents are expired or expiring within 30 days.")
             else:
-                # Add a status column for clarity
-                df_alerts['Status'] = df_alerts['Expiry Date'].apply(
+                df_alerts_eq['Status'] = df_alerts_eq['Expiry Date'].apply(
                     lambda d: "🚨 Expired" if d < today else "⚠️ Expiring Soon"
                 )
                 
-                # Format date for display
-                df_alerts['Expiry Date'] = df_alerts['Expiry Date'].apply(lambda d: d.strftime('%d-%b-%Y'))
+                df_alerts_eq['Expiry Date'] = df_alerts_eq['Expiry Date'].apply(lambda d: d.strftime('%d-%b-%Y'))
                 
-                # Sort by Status (Expired first) then by date
-                df_alerts = df_alerts.sort_values(by=["Status", "Expiry Date"])
+                df_alerts_eq = df_alerts_eq.sort_values(by=["Status", "Expiry Date"])
                 
-                display_cols = [
-                    "Equipment type", 
-                    "Palte No.", 
-                    "Document Type", 
-                    "Expiry Date", 
-                    "Status", 
-                    "Operator Name", 
-                    "Owner"
+                display_cols_eq = [
+                    "EQUIPMENT TYPE", "PALTE NO.", "Document Type", 
+                    "Expiry Date", "Status", "OPERATOR NAME", "OWNER"
                 ]
                 
-                # Filter display_cols to only include columns that actually exist in df_alerts
-                final_cols = [col for col in display_cols if col in df_alerts.columns]
+                final_cols_eq = [col for col in display_cols_eq if col in df_alerts_eq.columns]
                 
-                st.dataframe(df_alerts[final_cols], use_container_width=True)
-        # ---------------------------------- END OF TABLE ----------------------------------
+                st.dataframe(df_alerts_eq[final_cols_eq], use_container_width=True, hide_index=True)
+        # --- END OF TABLE ---
 
         st.markdown("---")
 
@@ -979,16 +972,14 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         expired_count = 0
         expiring_soon_count = 0
 
-        for col in date_cols:
-                if col in df_equip.columns:
-                        # Use .loc to ensure we are checking the parsed date column
-                        expired_count += df_equip.loc[df_equip[col] < today].shape[0]
-                        expiring_soon_count += df_equip.loc[(df_equip[col] >= today) & (df_equip[col] <= thirty_days)].shape[0] # <--- MODIFIED
+        for col in existing_date_cols_eq:
+            expired_count += df_equip.loc[df_equip[col] < today].shape[0]
+            expiring_soon_count += df_equip.loc[(df_equip[col] >= today) & (df_equip[col] <= thirty_days)].shape[0]
 
         kpi1_eq, kpi2_eq, kpi3_eq = st.columns(3)
         kpi1_eq.metric(label="Total Equipment", value=total_equipment)
         kpi2_eq.metric(label="Total Expired Items", value=expired_count, delta="Action Required", delta_color="inverse")
-        kpi3_eq.metric(label="Expiring in 30 Days", value=expiring_soon_count, delta="Monitor Closely", delta_color="off") # <--- MODIFIED
+        kpi3_eq.metric(label="Expiring in 30 Days", value=expiring_soon_count, delta="Monitor Closely", delta_color="off")
         
         st.markdown("---")
         
@@ -996,29 +987,29 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         c1_eq, c2_eq = st.columns(2)
 
         with c1_eq:
-            if 'Equipment type' in df_equip.columns:
+            if 'EQUIPMENT TYPE' in df_equip.columns:
                 fig_type_eq = px.bar(
-                    df_equip['Equipment type'].value_counts().reset_index(),
-                    x='Equipment type', y='count', title='Equipment Distribution by Type',
-                    labels={'count': 'Number of Units', 'Equipment type': 'Type'},
+                    df_equip['EQUIPMENT TYPE'].value_counts().reset_index(),
+                    x='EQUIPMENT TYPE', y='count', title='Equipment Distribution by Type',
+                    labels={'count': 'Number of Units', 'EQUIPMENT TYPE': 'Type'},
                     text_auto=True 
                 )
                 fig_type_eq.update_layout(xaxis_tickangle=-45)
                 st.plotly_chart(fig_type_eq, use_container_width=True)
 
         with c2_eq:
-            if 'PWAS status' in df_equip.columns:
+            if 'PWAS STATUS' in df_equip.columns:
                 fig_pwas = px.pie(
-                    df_equip, names='PWAS status', title='PWAS Status Overview',
+                    df_equip, names='PWAS STATUS', title='PWAS Status Overview',
                     hole=0.3
                 )
                 st.plotly_chart(fig_pwas, use_container_width=True)
                 
-        if 'Owner' in df_equip.columns:
+        if 'OWNER' in df_equip.columns:
             fig_owner = px.bar(
-                df_equip['Owner'].value_counts().nlargest(10).reset_index(),
-                x='Owner', y='count', title='Top 10 Equipment Owners',
-                labels={'count': 'Number of Units', 'Owner': 'Owner Name'},
+                df_equip['OWNER'].value_counts().nlargest(10).reset_index(),
+                x='OWNER', y='count', title='Top 10 Equipment Owners',
+                labels={'count': 'Number of Units', 'OWNER': 'Owner Name'},
                 text_auto=True
             )
             st.plotly_chart(fig_owner, use_container_width=True)
@@ -1027,16 +1018,152 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         
         st.subheader("Full Heavy Equipment Data")
         df_display_eq = df_equip.copy()
-        for col in date_cols:
-                if col in df_display_eq.columns:
-                        df_display_eq[col] = df_display_eq[col].apply(badge_expiry, expiry_days=30) # <--- MODIFIED
+        for col in existing_date_cols_eq:
+            df_display_eq[col] = df_display_eq[col].apply(badge_expiry, expiry_days=30)
         
-        st.dataframe(df_display_eq, use_container_width=True)
+        st.dataframe(df_display_eq, use_container_width=True, hide_index=True)
 
+    # -------------------- START: NEW HEAVY VEHICLE TAB --------------------
     with tab_veh:
-        st.subheader("Heavy Vehicle Analytics")
-        st.info("Heavy Vehicle dashboard is under construction.")
-        # Placeholder for heavy vehicle analytics
+        st.subheader("🚚 Heavy Vehicle Analytics")
+        try:
+            df_veh = pd.DataFrame(heavy_vehicle_sheet.get_all_records())
+            df_veh.columns = [str(col).strip().upper() for col in df_veh.columns]
+        except gspread.exceptions.GSpreadException as e:
+            st.error(f"Could not load data from Google Sheets: {e}")
+            return
+
+        if df_veh.empty:
+            st.info("No Heavy Vehicle data available to display.")
+            return
+
+        # --- Data Cleaning ---
+        date_cols_veh = ["MVPI EXPIRY DATE", "INSURANCE EXPIRY", "LICENCE EXPIRY"]
+        for col in date_cols_veh:
+            if col in df_veh.columns:
+                df_veh[col] = df_veh[col].apply(parse_date)
+        
+        cat_cols_veh = ["PWAS STATUS", "TYRE CONDITION", "SUSPENSION SYSTEMS", "F.A BOX", "SEAT BELT DAMAGED", "VEHICLE TYPE"]
+        for col in cat_cols_veh:
+             if col in df_veh.columns:
+                  df_veh[col] = df_veh[col].str.strip().str.capitalize()
+
+        # --- Filters ---
+        st.markdown("#### Filter & Explore")
+        with st.expander("Adjust Filters", expanded=True):
+            col_f1_veh, col_f2_veh = st.columns(2)
+            
+            type_options_veh = df_veh['VEHICLE TYPE'].unique() if 'VEHICLE TYPE' in df_veh.columns else []
+            selected_types_veh = col_f1_veh.multiselect("Filter by Vehicle Type", options=type_options_veh, default=type_options_veh)
+
+            owner_options_veh = df_veh['OWNER'].unique() if 'OWNER' in df_veh.columns else []
+            selected_owners_veh = col_f2_veh.multiselect("Filter by Owner", options=owner_options_veh, default=owner_options_veh)
+
+        # --- Apply Filters ---
+        mask_veh = pd.Series(True, index=df_veh.index)
+        if selected_types_veh and 'VEHICLE TYPE' in df_veh.columns:
+            mask_veh &= df_veh['VEHICLE TYPE'].isin(selected_types_veh)
+        if selected_owners_veh and 'OWNER' in df_veh.columns:
+            mask_veh &= df_veh['OWNER'].isin(selected_owners_veh)
+        
+        df_filtered_veh = df_veh[mask_veh]
+
+        if df_filtered_veh.empty:
+            st.warning("No data matches the selected filters.")
+            return
+
+        # --- Expiry Table ---
+        st.subheader("🚨 Vehicle Document Expiry Alerts")
+        id_cols_veh = ["VEHICLE TYPE", "PLATE NO", "OWNER", "DRIVER NAME"]
+        
+        existing_id_cols_veh = [c for c in id_cols_veh if c in df_filtered_veh.columns]
+        existing_date_cols_veh = [c for c in date_cols_veh if c in df_filtered_veh.columns]
+
+        if not existing_date_cols_veh or not existing_id_cols_veh:
+            st.warning("Could not generate alerts. Key identifier or date columns are missing from the sheet.")
+        else:
+            df_long_veh = df_filtered_veh.melt(
+                id_vars=existing_id_cols_veh, 
+                value_vars=existing_date_cols_veh, 
+                var_name="Document Type", 
+                value_name="Expiry Date"
+            )
+            df_long_veh.dropna(subset=['Expiry Date'], inplace=True)
+            df_alerts_veh = df_long_veh[df_long_veh['Expiry Date'] <= thirty_days].copy()
+
+            if df_alerts_veh.empty:
+                st.success("✅ No vehicle documents are expired or expiring within 30 days.")
+            else:
+                df_alerts_veh['Status'] = df_alerts_veh['Expiry Date'].apply(lambda d: "🚨 Expired" if d < today else "⚠️ Expiring Soon")
+                df_alerts_veh['Expiry Date'] = df_alerts_veh['Expiry Date'].apply(lambda d: d.strftime('%d-%b-%Y'))
+                df_alerts_veh = df_alerts_veh.sort_values(by=["Status", "Expiry Date"])
+                
+                display_cols_veh = ["VEHICLE TYPE", "PLATE NO", "Document Type", "Expiry Date", "Status", "DRIVER NAME", "OWNER"]
+                final_cols_veh = [col for col in display_cols_veh if col in df_alerts_veh.columns]
+                st.dataframe(df_alerts_veh[final_cols_veh], use_container_width=True, hide_index=True)
+        # --- END OF TABLE ---
+
+        st.markdown("---")
+
+        # --- KPIs ---
+        total_vehicles = len(df_filtered_veh)
+        expired_count_veh = 0
+        expiring_soon_count_veh = 0
+
+        for col in existing_date_cols_veh:
+            expired_count_veh += df_filtered_veh.loc[df_filtered_veh[col] < today].shape[0]
+            expiring_soon_count_veh += df_filtered_veh.loc[(df_filtered_veh[col] >= today) & (df_filtered_veh[col] <= thirty_days)].shape[0]
+
+        kpi1_veh, kpi2_veh, kpi3_veh = st.columns(3)
+        kpi1_veh.metric(label="Total Vehicles (Filtered)", value=total_vehicles)
+        kpi2_veh.metric(label="Total Expired Items", value=expired_count_veh, delta="Action Required", delta_color="inverse")
+        kpi3_veh.metric(label="Expiring in 30 Days", value=expiring_soon_count_veh, delta="Monitor Closely", delta_color="off")
+        
+        st.markdown("---")
+        
+        # --- Charts ---
+        st.subheader("Visual Insights")
+        c1_veh, c2_veh = st.columns(2)
+
+        with c1_veh:
+            if 'VEHICLE TYPE' in df_filtered_veh.columns:
+                fig_type_veh = px.bar(
+                    df_filtered_veh['VEHICLE TYPE'].value_counts().reset_index(),
+                    x='VEHICLE TYPE', y='count', title='Vehicle Distribution by Type',
+                    labels={'count': 'Number of Units', 'VEHICLE TYPE': 'Type'},
+                    text_auto=True 
+                )
+                fig_type_veh.update_layout(xaxis_tickangle=-45)
+                st.plotly_chart(fig_type_veh, use_container_width=True)
+
+        with c2_veh:
+            if 'PWAS STATUS' in df_filtered_veh.columns:
+                fig_pwas_veh = px.pie(
+                    df_filtered_veh, names='PWAS STATUS', title='PWAS Status Overview',
+                    hole=0.3
+                )
+                st.plotly_chart(fig_pwas_veh, use_container_width=True)
+                
+        if 'TYRE CONDITION' in df_filtered_veh.columns:
+            fig_tyre = px.bar(
+                df_filtered_veh['TYRE CONDITION'].value_counts().reset_index(),
+                x='TYRE CONDITION', y='count', title='Tyre Condition Overview',
+                labels={'count': 'Count', 'TYRE CONDITION': 'Condition'},
+                text_auto=True
+            )
+            st.plotly_chart(fig_tyre, use_container_width=True)
+        
+        # --- Full Table ---
+        st.markdown("---")
+        st.subheader("Full Heavy Vehicle Data (Filtered)")
+        df_display_veh = df_filtered_veh.copy()
+        for col in existing_date_cols_veh:
+            if col in df_display_veh.columns:
+                df_display_veh[col] = df_display_veh[col].apply(badge_expiry, expiry_days=30)
+        
+        st.dataframe(df_display_veh, use_container_width=True, hide_index=True)
+
+    # -------------------- END: NEW HEAVY VEHICLE TAB --------------------
 
 # -------------------- MAIN APP --------------------
 def main():
@@ -1077,7 +1204,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
