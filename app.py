@@ -368,7 +368,8 @@ def show_permit_form(sheet):
         "CAD welding",
         "Pipe Lowering"
         "Sand Bedding",
-        "Radiography test"
+        "Radiography test",
+        "Splicing"
     ]
 
     with st.form("permit_form", clear_on_submit=True):
