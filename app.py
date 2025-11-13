@@ -367,7 +367,8 @@ def show_permit_form(sheet):
         "Foundation Installation",
         "CAD welding",
         "Pipe Lowering"
-        "Sand Bedding"
+        "Sand Bedding",
+        "Radiography test"
     ]
 
     with st.form("permit_form", clear_on_submit=True):
@@ -1075,6 +1076,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
