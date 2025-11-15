@@ -120,9 +120,7 @@ def login():
         st.error(f"Make sure you have a file named `login_bg.jpg` in the same folder as your app.py.")
         st.error(f"Your app's current directory is: {os.path.abspath(os.getcwd())}")
         img_base64 = None
-    else:
-        st.success("")
-        img_base64 = get_img_as_base64(IMG_PATH)
+  
     # --- END: DEBUGGING ---
     
     background_css = ""
@@ -1218,5 +1216,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
