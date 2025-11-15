@@ -332,7 +332,7 @@ def show_observation_form(sheet):
             trade = SUPERVISOR_TRADE_MAP.get(supervisor_name, "")
             discipline = st.text_input("Discipline", value=trade, disabled=True)
             status = st.selectbox("Status", ["OPEN", "CLOSE"])
-        
+            
         obs_details = st.text_area("Observation Details")
         rec_action = st.text_area("Recommended Action")
 
@@ -1058,7 +1058,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         cat_cols_veh = ["PWAS STATUS", "TYRE CONDITION", "SUSPENSION SYSTEMS", "F.A BOX", "SEAT BELT DAMAGED", "VEHICLE TYPE"]
         for col in cat_cols_veh:
              if col in df_veh.columns:
-                  df_veh[col] = df_veh[col].str.strip().str.capitalize()
+                 df_veh[col] = df_veh[col].str.strip().str.capitalize()
 
         # --- Filters ---
         st.markdown("#### Filter & Explore")
@@ -1216,5 +1216,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
