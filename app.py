@@ -284,7 +284,8 @@ def show_observation_form(sheet):
         "Environmental / Waste Management",
         "Health, hygiene & welfare",
         "Radiation and NDT",
-        "Security, Unsafe Behavior, and other project Requirements"
+        "Security, Unsafe Behavior, and other project Requirements",
+        "PPE"
     ]
 
     SUPERVISOR_TRADE_MAP = {
@@ -1215,3 +1216,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
