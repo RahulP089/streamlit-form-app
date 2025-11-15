@@ -81,7 +81,7 @@ def get_sheets():
         try:
             ws = wb.worksheet(ws_title)
         except gspread.exceptions.WorksheetNotFound:
-            ws = wb.add_worksheet(title=ws_title, rows="1000", cols="40")
+            ws = wb.add_workskeyt(title=ws_title, rows="1000", cols="40")
             if headers:
                 ws.append_row(headers)
         return ws
@@ -106,28 +106,21 @@ def get_sheets():
     return obs_sheet, permit_sheet, heavy_equip_sheet, heavy_vehicle_sheet
 
 # -------------------- LOGIN PAGE --------------------
-# -------------------- LOGIN PAGE --------------------
 def login():
     
-    # --- START: ROBUST BACKGROUND IMAGE CODE ---
-    try:
-        # Get the absolute path to the directory containing this script
-        APP_DIR = os.path.dirname(os.path.abspath(__file__))
-    except NameError:
-        # Fallback for environments where __file__ is not set (like notebooks)
-        APP_DIR = os.path.abspath(".")
-        
-    # Join the app directory path with the image file name
-    IMG_PATH = os.path.join(APP_DIR, "login_bg.jpg")
+    # --- START: FRESH STEP ---
+    # We will try the simplest path first.
+    # This assumes "login_bg.jpg" is in the SAME folder as "app.py"
+    IMG_PATH = "login_bg.jpg" 
+    # --- END: FRESH STEP ---
 
     # --- START: DEBUGGING ---
-    st.write(f"ℹ️ *App directory is: `{APP_DIR}`*")
     st.write(f"ℹ️ *Looking for image at: `{IMG_PATH}`*")
     
     if not os.path.exists(IMG_PATH):
         st.error("🚨 Background Image Not Found! 🚨")
-        st.error(f"Make sure you have a file named `login_bg.jpg` in this exact folder:")
-        st.error(APP_DIR)
+        st.error(f"Make sure you have a file named `login_bg.jpg` in the same folder as your app.py.")
+        st.error(f"Your app's current directory is: {os.path.abspath(os.getcwd())}")
         img_base64 = None
     else:
         st.success("✅ Background image found!")
@@ -136,16 +129,11 @@ def login():
     
     background_css = ""
     if img_base64:
-        # --- NEW: Auto-detect file type ---
-        # Get the file extension (e.g., ".jpg", ".png")
+        # --- Auto-detect file type ---
         file_extension = os.path.splitext(IMG_PATH)[1].lower()
-        
-        # Get the mime type (e.g., "jpeg", "png")
-        # Note: CSS uses "jpeg" for .jpg files
         mime_type = file_extension[1:] # remove the dot
         if mime_type == "jpg":
             mime_type = "jpeg"
-        # --- END NEW ---
 
         # Create the CSS for the background
         background_css = f"""
@@ -166,65 +154,9 @@ def login():
     .login-container {{
         max-width: 400px; margin: 4rem auto; padding: 2rem;
         border-radius: 12px;
-        
-        /* --- "Glass" effect --- */
         background-color: rgba(255, 255, 255, 0.85);
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
-        
-        box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
-        text-align: center;
-    }}
-    .login-title {{
-        font-size: 32px; font-weight:700; color:#2c3e50;
-        margin-bottom:1.5rem;
-    }}
-    </style>
-    """, unsafe_allow_html=True)
-
-    st.markdown('<div class="login-container">', unsafe_allow_html=True)
-    st.markdown('<div class="login-title">🛡️ Login</div>', unsafe_allow_html=True)
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-    login_btn = st.button("Login")
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    if login_btn:
-        user = USER_CREDENTIALS.get(username)
-        if user and user["password"] == password:
-            st.session_state.update(logged_in=True, username=username, role=user["role"])
-            st.rerun()
-        else:
-            st.error("❌ Invalid username or password")
-    # --- END: NEW DEBUGGING ---
-    
-    background_css = ""
-    if img_base64:
-        # Create the CSS for the background
-        background_css = f"""
-        <style>
-        [data-testid="stAppViewContainer"] > .main {{
-            background-image: url("data:image/jpg;base64,{img_base64}");
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            background-attachment: fixed;
-        }}
-        </style>
-        """
-
-    st.markdown(f"""
-    {background_css}
-    <style>
-    .login-container {{
-        max-width: 400px; margin: 4rem auto; padding: 2rem;
-        border-radius: 12px;
-        
-        /* --- "Glass" effect --- */
-        background-color: rgba(255, 255, 255, 0.85);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        
         box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
         text-align: center;
     }}
@@ -1281,4 +1213,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
