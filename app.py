@@ -154,7 +154,7 @@ def login():
         box-shadow: none;
         
         /* "reduce the length" -> set max-width */
-        max-width: 350px; /* Reduced from 400px */
+        max-width: 200px; /* Reduced from 400px */
         
         /* "make it centre" -> set margin auto */
         margin: 4rem auto; 
@@ -1259,3 +1259,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
