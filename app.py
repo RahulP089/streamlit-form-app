@@ -106,13 +106,11 @@ def get_sheets():
     return obs_sheet, permit_sheet, heavy_equip_sheet, heavy_vehicle_sheet
 
 # -------------------- LOGIN PAGE --------------------
+# -------------------- LOGIN PAGE --------------------
 def login():
     
-    # --- START: FRESH STEP ---
-    # We will try the simplest path first.
     # This assumes "login_bg.jpg" is in the SAME folder as "app.py"
     IMG_PATH = "login_bg.jpg" 
-    # --- END: FRESH STEP ---
 
     # --- START: DEBUGGING ---
     st.write(f"ℹ️ *Looking for image at: `{IMG_PATH}`*")
@@ -135,18 +133,25 @@ def login():
         if mime_type == "jpg":
             mime_type = "jpeg"
 
+        # --- START: NEW, MORE FORCEFUL CSS ---
         # Create the CSS for the background
         background_css = f"""
         <style>
-        [data-testid="stAppViewContainer"] > .main {{
+        [data-testid="stAppViewContainer"] {{
             background-image: url("data:image/{mime_type};base64,{img_base64}");
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
             background-attachment: fixed;
         }}
+        
+        /* This makes the main content area transparent so the background shows through */
+        [data-testid="stAppViewContainer"] > .main {{
+            background-color: transparent !important;
+        }}
         </style>
         """
+        # --- END: NEW, MORE FORCEFUL CSS ---
 
     st.markdown(f"""
     {background_css}
@@ -1213,3 +1218,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
