@@ -148,14 +148,13 @@ def login():
     <style>
     .login-container {{
         /* --- THIS IS WHAT YOU WANTED CHANGED --- */
-        /* "remove this box" -> make it transparent */
         background-color: transparent; 
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
         box-shadow: none;
         
         /* "reduce the length" -> set max-width */
-        max-width: 400px; 
+        max-width: 350px; /* Reduced from 400px */
         
         /* "make it centre" -> set margin auto */
         margin: 4rem auto; 
@@ -168,26 +167,40 @@ def login():
     .login-title {{
         font-size: 32px; 
         font-weight: 700; 
-        /* --- CHANGED --- */
         /* Make text white and add shadow to be visible on background */
         color: white; 
         text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
         margin-bottom: 1.5rem;
     }}
 
-    /* --- ADDED --- */
     /* This makes the "Username" and "Password" labels white and readable */
     .login-container label {{
         color: white !important;
         text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    }}
+
+    /* --- ADDED --- */
+    /* Target Streamlit's specific input containers for width adjustment */
+    /* This centers the input widgets themselves within the login-container */
+    .login-container [data-testid="stTextInput"],
+    .login-container [data-testid="stPasswordInput"] {{
+        margin-left: auto;
+        margin-right: auto;
+        width: 100%; /* The inputs will take 100% of the login-container's width (350px) */
+    }}
+
+    /* Center the button */
+    .login-container .stButton > button {{
+        margin: 1rem auto;
+        display: block;
     }}
     </style>
     """, unsafe_allow_html=True)
 
     st.markdown('<div class="login-container">', unsafe_allow_html=True)
     st.markdown('<div class="login-title">🛡️ Login</div>', unsafe_allow_html=True)
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
+    username = st.text_input("Username", key="login_username")
+    password = st.text_input("Password", type="password", key="login_password")
     login_btn = st.button("Login")
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -437,7 +450,7 @@ def show_permit_form(sheet):
         "Survey",
         "Foundation Installation",
         "CAD welding",
-        "Pipe Lowering"
+        "Pipe Lowering",
         "Sand Bedding",
         "Radiography test",
         "Splicing "
@@ -547,12 +560,12 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
 
         if df_obs.empty:
             st.info("No observation data available to display.")
-            return # Changed from continue to return
+            return
 
         # --- Data Cleaning and Preparation ---
         if 'DATE' not in df_obs.columns:
             st.warning("The 'DATE' column is missing from the Observation Log sheet.")
-            return # Changed from continue to return
+            return
 
         df_obs['DATE'] = pd.to_datetime(df_obs['DATE'], errors='coerce')
         df_obs.dropna(subset=['DATE'], inplace=True)
@@ -602,7 +615,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
 
         if df_filtered_obs.empty:
             st.warning("No data matches the selected filters.")
-            return # Changed from continue to return
+            return
 
         # --- High-Level KPIs ---
         st.markdown("---")
@@ -1195,11 +1208,26 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
 # -------------------- MAIN APP --------------------
 def main():
     st.set_page_config(page_title="Onsite Reporting System", layout="wide")
-    if "logged_in" not in st.session_state or not st.session_state.get("logged_in"):
-        login()
-        return
+    
+    # Check session state for login status
+    if "logged_in" not in st.session_state:
+        st.session_state.logged_in = False
 
-    obs_sheet, permit_sheet, heavy_equip_sheet, heavy_vehicle_sheet = get_sheets()
+    if not st.session_state.logged_in:
+        login()
+        return # Stop execution if not logged in
+
+    # --- Main app logic runs only if logged in ---
+    try:
+        obs_sheet, permit_sheet, heavy_equip_sheet, heavy_vehicle_sheet = get_sheets()
+    except Exception as e:
+        st.error(f"Failed to connect to Google Sheets. Please check your connection and secrets.")
+        st.error(f"Error details: {e}")
+        if st.button("Logout"):
+            st.session_state.clear()
+            st.rerun()
+        return # Stop if sheets can't be loaded
+
     choice = sidebar()
 
     if choice == "🏠 Home":
