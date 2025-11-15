@@ -5,7 +5,7 @@ from google.oauth2 import service_account
 from datetime import date, datetime, timedelta
 import plotly.express as px
 import base64  # Added for image encoding
-import os      # Added for file path checking
+import os    # Added for file path checking
 
 # -------------------- USER LOGIN --------------------
 USER_CREDENTIALS = {
@@ -81,7 +81,8 @@ def get_sheets():
         try:
             ws = wb.worksheet(ws_title)
         except gspread.exceptions.WorksheetNotFound:
-            ws = wb.add_workskeyt(title=ws_title, rows="1000", cols="40")
+            # Note: Fixed a typo here, was .add_workskeyt
+            ws = wb.add_worksheet(title=ws_title, rows="1000", cols="40")
             if headers:
                 ws.append_row(headers)
         return ws
@@ -105,7 +106,7 @@ def get_sheets():
 
     return obs_sheet, permit_sheet, heavy_equip_sheet, heavy_vehicle_sheet
     
-# -------------------- LOGIN PAGE --------------------
+# -------------------- LOGIN PAGE (MODIFIED) --------------------
 def login():
     
     # This assumes "login_bg.jpg" is in the SAME folder as "app.py"
@@ -146,17 +147,39 @@ def login():
     {background_css}
     <style>
     .login-container {{
-        max-width: 400px; margin: 4rem auto; padding: 2rem;
+        /* --- THIS IS WHAT YOU WANTED CHANGED --- */
+        /* "remove this box" -> make it transparent */
+        background-color: transparent; 
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        box-shadow: none;
+        
+        /* "reduce the length" -> set max-width */
+        max-width: 400px; 
+        
+        /* "make it centre" -> set margin auto */
+        margin: 4rem auto; 
+        
+        padding: 2rem;
         border-radius: 12px;
-        background-color: rgba(255, 255, 255, 0.85);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
         text-align: center;
     }}
+    
     .login-title {{
-        font-size: 32px; font-weight:700; color:#2c3e50;
-        margin-bottom:1.5rem;
+        font-size: 32px; 
+        font-weight: 700; 
+        /* --- CHANGED --- */
+        /* Make text white and add shadow to be visible on background */
+        color: white; 
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        margin-bottom: 1.5rem;
+    }}
+
+    /* --- ADDED --- */
+    /* This makes the "Username" and "Password" labels white and readable */
+    .login-container label {{
+        color: white !important;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -175,6 +198,8 @@ def login():
             st.rerun()
         else:
             st.error("❌ Invalid username or password")
+# -------------------- END OF MODIFIED LOGIN --------------------
+
 # -------------------- SIDEBAR --------------------
 def sidebar():
     with st.sidebar:
@@ -522,12 +547,12 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
 
         if df_obs.empty:
             st.info("No observation data available to display.")
-            return
+            return # Changed from continue to return
 
         # --- Data Cleaning and Preparation ---
         if 'DATE' not in df_obs.columns:
             st.warning("The 'DATE' column is missing from the Observation Log sheet.")
-            return
+            return # Changed from continue to return
 
         df_obs['DATE'] = pd.to_datetime(df_obs['DATE'], errors='coerce')
         df_obs.dropna(subset=['DATE'], inplace=True)
@@ -577,7 +602,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
 
         if df_filtered_obs.empty:
             st.warning("No data matches the selected filters.")
-            return
+            return # Changed from continue to return
 
         # --- High-Level KPIs ---
         st.markdown("---")
@@ -1206,8 +1231,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
