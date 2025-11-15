@@ -104,8 +104,7 @@ def get_sheets():
     heavy_vehicle_sheet = get_or_create(HEAVY_VEHICLE_TAB, headers=heavy_vehicle_headers)
 
     return obs_sheet, permit_sheet, heavy_equip_sheet, heavy_vehicle_sheet
-
-# -------------------- LOGIN PAGE --------------------
+    
 # -------------------- LOGIN PAGE --------------------
 def login():
     
@@ -120,7 +119,9 @@ def login():
         st.error(f"Make sure you have a file named `login_bg.jpg` in the same folder as your app.py.")
         st.error(f"Your app's current directory is: {os.path.abspath(os.getcwd())}")
         img_base64 = None
-  
+    else:
+        st.success("✅ Background image found!")
+        img_base64 = get_img_as_base64(IMG_PATH)
     # --- END: DEBUGGING ---
     
     background_css = ""
@@ -184,7 +185,6 @@ def login():
             st.rerun()
         else:
             st.error("❌ Invalid username or password")
-
 # -------------------- SIDEBAR --------------------
 def sidebar():
     with st.sidebar:
@@ -1216,6 +1216,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
