@@ -106,6 +106,7 @@ def get_sheets():
     return obs_sheet, permit_sheet, heavy_equip_sheet, heavy_vehicle_sheet
 
 # -------------------- LOGIN PAGE --------------------
+# -------------------- LOGIN PAGE --------------------
 def login():
     
     # --- START: ROBUST BACKGROUND IMAGE CODE ---
@@ -119,7 +120,7 @@ def login():
     # Join the app directory path with the image file name
     IMG_PATH = os.path.join(APP_DIR, "login_bg.jpg")
 
-    # --- START: NEW DEBUGGING ---
+    # --- START: DEBUGGING ---
     st.write(f"ℹ️ *App directory is: `{APP_DIR}`*")
     st.write(f"ℹ️ *Looking for image at: `{IMG_PATH}`*")
     
@@ -131,6 +132,70 @@ def login():
     else:
         st.success("✅ Background image found!")
         img_base64 = get_img_as_base64(IMG_PATH)
+    # --- END: DEBUGGING ---
+    
+    background_css = ""
+    if img_base64:
+        # --- NEW: Auto-detect file type ---
+        # Get the file extension (e.g., ".jpg", ".png")
+        file_extension = os.path.splitext(IMG_PATH)[1].lower()
+        
+        # Get the mime type (e.g., "jpeg", "png")
+        # Note: CSS uses "jpeg" for .jpg files
+        mime_type = file_extension[1:] # remove the dot
+        if mime_type == "jpg":
+            mime_type = "jpeg"
+        # --- END NEW ---
+
+        # Create the CSS for the background
+        background_css = f"""
+        <style>
+        [data-testid="stAppViewContainer"] > .main {{
+            background-image: url("data:image/{mime_type};base64,{img_base64}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }}
+        </style>
+        """
+
+    st.markdown(f"""
+    {background_css}
+    <style>
+    .login-container {{
+        max-width: 400px; margin: 4rem auto; padding: 2rem;
+        border-radius: 12px;
+        
+        /* --- "Glass" effect --- */
+        background-color: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        
+        box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+        text-align: center;
+    }}
+    .login-title {{
+        font-size: 32px; font-weight:700; color:#2c3e50;
+        margin-bottom:1.5rem;
+    }}
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div class="login-container">', unsafe_allow_html=True)
+    st.markdown('<div class="login-title">🛡️ Login</div>', unsafe_allow_html=True)
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+    login_btn = st.button("Login")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    if login_btn:
+        user = USER_CREDENTIALS.get(username)
+        if user and user["password"] == password:
+            st.session_state.update(logged_in=True, username=username, role=user["role"])
+            st.rerun()
+        else:
+            st.error("❌ Invalid username or password")
     # --- END: NEW DEBUGGING ---
     
     background_css = ""
@@ -1216,3 +1281,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
