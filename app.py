@@ -111,28 +111,16 @@ def login():
     # This assumes "login_bg.jpg" is in the SAME folder as "app.py"
     IMG_PATH = "login_bg.jpg" 
 
-    # --- START: DEBUGGING ---
-    st.write(f"ℹ️ *Looking for image at: `{IMG_PATH}`*")
-    
-    if not os.path.exists(IMG_PATH):
-        st.error("🚨 Background Image Not Found! 🚨")
-        st.error(f"Make sure you have a file named `login_bg.jpg` in the same folder as your app.py.")
-        st.error(f"Your app's current directory is: {os.path.abspath(os.getcwd())}")
-        img_base64 = None
-    else:
-        st.success("✅ Background image found!")
-        img_base64 = get_img_as_base64(IMG_PATH)
-    # --- END: DEBUGGING ---
+    img_base64 = get_img_as_base64(IMG_PATH) # Try to get the image
     
     background_css = ""
     if img_base64:
-        # --- Auto-detect file type ---
+        # Auto-detect file type
         file_extension = os.path.splitext(IMG_PATH)[1].lower()
         mime_type = file_extension[1:] # remove the dot
         if mime_type == "jpg":
             mime_type = "jpeg"
 
-        # --- START: NEW, MORE FORCEFUL CSS ---
         # Create the CSS for the background
         background_css = f"""
         <style>
@@ -150,7 +138,9 @@ def login():
         }}
         </style>
         """
-        # --- END: NEW, MORE FORCEFUL CSS ---
+    # If img_base64 is None (image not found), background_css will remain an empty string,
+    # and the app will just have its default background. No error message is displayed
+    # in the UI now for a cleaner user experience.
 
     st.markdown(f"""
     {background_css}
@@ -1216,6 +1206,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
