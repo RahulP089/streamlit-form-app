@@ -121,7 +121,7 @@ def login():
         st.error(f"Your app's current directory is: {os.path.abspath(os.getcwd())}")
         img_base64 = None
     else:
-        st.success("✅ Background image found!")
+        st.success("")
         img_base64 = get_img_as_base64(IMG_PATH)
     # --- END: DEBUGGING ---
     
@@ -1218,4 +1218,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
