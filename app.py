@@ -1,9 +1,9 @@
-import streamlit as st
-import pandas as pd
-import gspread
+import streamlit as st # for web
+import pandas as pd # For JSON file
+import gspread # Link spread sheet
 from google.oauth2 import service_account
 from datetime import date, datetime, timedelta
-import plotly.express as px
+import plotly.express as px  # fore pie
 import base64  # Added for image encoding
 import os    # Added for file path checking
 
