@@ -3,9 +3,9 @@ import pandas as pd # For JSON file
 import gspread # Link spread sheet
 from google.oauth2 import service_account
 from datetime import date, datetime, timedelta
-import plotly.express as px  # fore pie
-import base64  # Added for image encoding
-import os    # Added for file path checking
+import plotly.express as px # fore pie
+import base64 # Added for image encoding
+import os # Added for file path checking
 
 # -------------------- USER LOGIN --------------------
 USER_CREDENTIALS = {
@@ -87,10 +87,11 @@ def get_sheets():
                 ws.append_row(headers)
         return ws
     
+    # MODIFIED: Removed "F.E TP expiry" from the headers list
     heavy_equip_headers = [
         "Equipment type", "Make", "Palte No.", "Asset code", "Owner", "T.P inspection date", "T.P Expiry date",
         "Insurance expiry date", "Operator Name", "Iqama NO", "T.P Card type", "T.P Card Number",
-        "T.P Card expiry date", "Q.R code", "PWAS status", "F.E TP expiry",
+        "T.P Card expiry date", "Q.R code", "PWAS status",
         "FA box Status", "Documents"
     ]
 
@@ -251,8 +252,9 @@ def show_equipment_form(sheet):
         tp_insp_date = cols_dates[0].date_input("T.P inspection date").strftime(date_format)
         tp_expiry = cols_dates[1].date_input("T.P Expiry date").strftime(date_format)
         insurance_expiry = cols_dates[0].date_input("Insurance expiry date").strftime(date_format)
-        fe_tp_expiry = cols_dates[1].date_input("F.E TP expiry").strftime(date_format)
-        tp_card_expiry = cols_dates[0].date_input("T.P Card expiry date").strftime(date_format)
+        # REMOVED: fe_tp_expiry field
+        # fe_tp_expiry = cols_dates[1].date_input("F.E TP expiry").strftime(date_format) 
+        tp_card_expiry = cols_dates[1].date_input("T.P Card expiry date").strftime(date_format)
 
         st.subheader("T.P Card & Status")
         cols_status = st.columns(2)
@@ -264,11 +266,18 @@ def show_equipment_form(sheet):
         documents = cols_status[1].text_input("Documents")
 
         if st.form_submit_button("Submit", use_container_width=True):
+            # MODIFIED: Removed fe_tp_expiry from data list. A placeholder for the column must be used if
+            # the original sheet structure is to be maintained, or update the sheet structure.
+            # Assuming the sheet structure is updated or a placeholder is acceptable:
+            
+            # Note: Since the get_sheets() function now uses a header without "F.E TP expiry", 
+            # we should append data matching the new header structure.
             data = [
                 equipment_type, make, plate_no, asset_code, owner, tp_insp_date, tp_expiry,
                 insurance_expiry, operator_name, iqama_no, tp_card_type, tp_card_number,
-                tp_card_expiry, qr_code, pwas_status, fe_tp_expiry, fa_box_status, documents
+                tp_card_expiry, qr_code, pwas_status, fa_box_status, documents
             ]
+            
             try:
                 sheet.append_row(data)
                 st.success("✅ Equipment submitted successfully!")
@@ -475,13 +484,13 @@ def show_permit_form(sheet):
         if st.form_submit_button("Submit"):
             data = [
                 date_val.strftime("%d-%b-%Y"), # Column A: DATE
-                drill_site,                   # Column B: DRILL SITE
-                work_location,                # Column C: WORK LOCATION
-                permit_no,                    # Column D: PERMIT NO
-                permit_type,                  # Column E: TYPE OF PERMIT
-                activity,                     # Column F: ACTIVITY
-                permit_receiver,              # Column G: PERMIT RECEIVER
-                permit_issuer                 # Column H: PERMIT ISSUER
+                drill_site,                    # Column B: DRILL SITE
+                work_location,                 # Column C: WORK LOCATION
+                permit_no,                     # Column D: PERMIT NO
+                permit_type,                   # Column E: TYPE OF PERMIT
+                activity,                      # Column F: ACTIVITY
+                permit_receiver,               # Column G: PERMIT RECEIVER
+                permit_issuer                  # Column H: PERMIT ISSUER
             ]
             try:
                 sheet.append_row(data)
@@ -572,9 +581,9 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         df_obs = df_obs.sort_values(by='DATE', ascending=False)
         
         if 'CLASSIFICATION' in df_obs.columns:
-             df_obs['CLASSIFICATION'] = df_obs['CLASSIFICATION'].str.strip().str.upper()
+            df_obs['CLASSIFICATION'] = df_obs['CLASSIFICATION'].str.strip().str.upper()
         if 'STATUS' in df_obs.columns:
-             df_obs['STATUS'] = df_obs['STATUS'].str.strip().str.capitalize()
+            df_obs['STATUS'] = df_obs['STATUS'].str.strip().str.capitalize()
 
 
         # --- Interactive Filters ---
@@ -959,10 +968,11 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             st.info("No Heavy Equipment data available to display.")
             return
 
-        date_cols_eq = ["T.P EXPIRY DATE", "INSURANCE EXPIRY DATE", "T.P CARD EXPIRY DATE", "F.E TP EXPIRY"]
+        # MODIFIED: Removed "F.E TP EXPIRY" from date_cols_eq
+        date_cols_eq = ["T.P EXPIRY DATE", "INSURANCE EXPIRY DATE", "T.P CARD EXPIRY DATE"]
         for col in date_cols_eq:
                 if col in df_equip.columns:
-                        df_equip[col] = df_equip[col].apply(parse_date)
+                    df_equip[col] = df_equip[col].apply(parse_date)
 
         # --- EXPIRY TRACKING TABLE ---
         st.subheader("🚨 Equipment Document Expiry Alerts")
@@ -1259,5 +1269,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
