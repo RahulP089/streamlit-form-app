@@ -63,6 +63,24 @@ def badge_expiry(d, expiry_days=30):
     else:
         return f"✅ Valid ({date_str})"
 
+def ensure_headers_match(worksheet, expected_headers):
+    """Checks and overwrites the header row of a worksheet if it doesn't match the expected list."""
+    try:
+        current_header = worksheet.row_values(1)
+        # Check if the current header matches the expected header list exactly
+        if current_header != expected_headers:
+            # Overwrite the first row with the correct headers
+            worksheet.update('A1', [expected_headers])
+            # Clear any cells after the new header in the first row
+            if len(current_header) > len(expected_headers):
+                 worksheet.batch_clear([f'{chr(ord("A") + len(expected_headers))}1:Z1'])
+            st.toast(f"✅ Headers updated successfully in '{worksheet.title}'. Reloading data...", icon="🚨")
+            # Force cache clear and rerun to immediately use the correct data schema
+            st.cache_resource.clear()
+            st.rerun()
+    except Exception as e:
+        st.error(f"Failed to verify/fix headers in {worksheet.title}: {e}")
+
 # -------------------- GOOGLE SHEETS CONNECTION --------------------
 @st.cache_resource(ttl=600) # Cache for 10 minutes
 def get_sheets():
@@ -81,7 +99,7 @@ def get_sheets():
         try:
             ws = wb.worksheet(ws_title)
         except gspread.exceptions.WorksheetNotFound:
-            # Note: Fixed a typo here, was .add_workskeyt
+            # Create sheet if it doesn't exist and append headers
             ws = wb.add_worksheet(title=ws_title, rows="1000", cols="40")
             if headers:
                 ws.append_row(headers)
@@ -105,9 +123,14 @@ def get_sheets():
     heavy_equip_sheet = get_or_create(HEAVY_EQUIP_TAB, headers=heavy_equip_headers)
     heavy_vehicle_sheet = get_or_create(HEAVY_VEHICLE_TAB, headers=heavy_vehicle_headers)
 
+    # FIX: Ensure headers are correct for existing sheets
+    ensure_headers_match(heavy_equip_sheet, heavy_equip_headers)
+    ensure_headers_match(heavy_vehicle_sheet, heavy_vehicle_headers)
+
+
     return obs_sheet, permit_sheet, heavy_equip_sheet, heavy_vehicle_sheet
     
-# -------------------- LOGIN PAGE (MODIFIED) --------------------
+# -------------------- LOGIN PAGE --------------------
 def login():
     
     # This assumes "login_bg.jpg" is in the SAME folder as "app.py"
@@ -140,24 +163,18 @@ def login():
         }}
         </style>
         """
-    # If img_base64 is None (image not found), background_css will remain an empty string,
-    # and the app will just have its default background. No error message is displayed
-    # in the UI now for a cleaner user experience.
 
     st.markdown(f"""
     {background_css}
     <style>
     .login-container {{
-        /* --- THIS IS WHAT YOU WANTED CHANGED --- */
         background-color: transparent; 
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
         box-shadow: none;
         
-        /* "reduce the length" -> set max-width */
-        max-width: 200px; /* Reduced from 400px */
+        max-width: 200px;
         
-        /* "make it centre" -> set margin auto */
         margin: 4rem auto; 
         
         padding: 2rem;
@@ -168,29 +185,23 @@ def login():
     .login-title {{
         font-size: 32px; 
         font-weight: 700; 
-        /* Make text white and add shadow to be visible on background */
         color: white; 
         text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
         margin-bottom: 1.5rem;
     }}
 
-    /* This makes the "Username" and "Password" labels white and readable */
     .login-container label {{
         color: white !important;
         text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
     }}
 
-    /* --- ADDED --- */
-    /* Target Streamlit's specific input containers for width adjustment */
-    /* This centers the input widgets themselves within the login-container */
     .login-container [data-testid="stTextInput"],
     .login-container [data-testid="stPasswordInput"] {{
         margin-left: auto;
         margin-right: auto;
-        width: 100%; /* The inputs will take 100% of the login-container's width (350px) */
+        width: 100%;
     }}
 
-    /* Center the button */
     .login-container .stButton > button {{
         margin: 1rem auto;
         display: block;
@@ -212,7 +223,7 @@ def login():
             st.rerun()
         else:
             st.error("❌ Invalid username or password")
-# -------------------- END OF MODIFIED LOGIN --------------------
+# -------------------- END OF LOGIN --------------------
 
 # -------------------- SIDEBAR --------------------
 def sidebar():
@@ -252,8 +263,8 @@ def show_equipment_form(sheet):
         tp_insp_date = cols_dates[0].date_input("T.P inspection date").strftime(date_format)
         tp_expiry = cols_dates[1].date_input("T.P Expiry date").strftime(date_format)
         insurance_expiry = cols_dates[0].date_input("Insurance expiry date").strftime(date_format)
-        # REMOVED: fe_tp_expiry field
-        # fe_tp_expiry = cols_dates[1].date_input("F.E TP expiry").strftime(date_format) 
+        
+        # MODIFIED: Removed fe_tp_expiry from UI
         tp_card_expiry = cols_dates[1].date_input("T.P Card expiry date").strftime(date_format)
 
         st.subheader("T.P Card & Status")
@@ -266,12 +277,7 @@ def show_equipment_form(sheet):
         documents = cols_status[1].text_input("Documents")
 
         if st.form_submit_button("Submit", use_container_width=True):
-            # MODIFIED: Removed fe_tp_expiry from data list. A placeholder for the column must be used if
-            # the original sheet structure is to be maintained, or update the sheet structure.
-            # Assuming the sheet structure is updated or a placeholder is acceptable:
-            
-            # Note: Since the get_sheets() function now uses a header without "F.E TP expiry", 
-            # we should append data matching the new header structure.
+            # MODIFIED: Data list aligns with the new 17-column header
             data = [
                 equipment_type, make, plate_no, asset_code, owner, tp_insp_date, tp_expiry,
                 insurance_expiry, operator_name, iqama_no, tp_card_type, tp_card_number,
@@ -533,6 +539,7 @@ def show_heavy_vehicle_form(sheet):
         remarks = st.text_area("Remarks")
 
         if st.form_submit_button("Submit"):
+            # This form did not contain F.E TP expiry, so no change to the data list is needed
             data = [
                 vehicle_type, make, plate_no, asset_code, owner,
                 mvpi_expiry, insurance_expiry,
@@ -1229,6 +1236,7 @@ def main():
 
     # --- Main app logic runs only if logged in ---
     try:
+        # get_sheets() now includes the header verification/fix logic
         obs_sheet, permit_sheet, heavy_equip_sheet, heavy_vehicle_sheet = get_sheets()
     except Exception as e:
         st.error(f"Failed to connect to Google Sheets. Please check your connection and secrets.")
