@@ -429,6 +429,7 @@ def show_permit_form(sheet):
     PERMIT_ACTIVITIES = [
         "--- Select Activity ---",
         "Mechanical Excavation",
+        "Manual Excavation",
         "Fitup welding cutting and grinding",
         "Holiday test",
         "Manual painting",
@@ -1277,6 +1278,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
