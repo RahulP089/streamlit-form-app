@@ -432,6 +432,7 @@ def show_permit_form(sheet):
         "Manual Excavation",
         "Fitup welding cutting and grinding",
         "Holiday test",
+        "Pole erection",
         "Manual painting",
         "CP drilling",
         "Trenching and Backfilling",
@@ -1278,6 +1279,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
