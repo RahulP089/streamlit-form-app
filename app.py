@@ -403,7 +403,7 @@ def show_permit_form(sheet):
     st.header("🛠️ Daily Internal Permit Log")
     
     WORK_LOCATIONS = [
-        "Well Head", "OHPL", "E&I Skid", "Burn Pit", "Cellar",
+        "Well Head", "OHPL", "OPTF", "E&I Skid", "Burn Pit", "Cellar",
         "Flow Line", "Lay down", "CP area","BD-Line"
     ]
     PERMIT_TYPES = ["Hot", "Cold", "CSE", "EOLB"]
@@ -1278,6 +1278,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
