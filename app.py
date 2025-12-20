@@ -454,6 +454,7 @@ def show_permit_form(sheet):
         "Shuttering activity",
         "Nitrogen purging",
         "Berming",
+        "Rebar works",
         "Marker installation",
         "Grouting",
         "Cellar construction",
@@ -1279,6 +1280,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
