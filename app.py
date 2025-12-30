@@ -329,6 +329,7 @@ def show_observation_form(sheet):
         "Radiation and NDT",
         "Security, Unsafe Behavior, and other project Requirements",
         "PPE"
+        "House Keeping"
     ]
 
     SUPERVISOR_TRADE_MAP = {
@@ -1281,6 +1282,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
