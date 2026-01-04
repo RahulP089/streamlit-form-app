@@ -32,7 +32,6 @@ ALL_SITES = [
 def get_img_as_base64(file):
     """Reads an image file and returns it as a base64 encoded string."""
     if not os.path.exists(file):
-        # st.error(f"Cannot find image file: {file}") # Optional: show error
         return None
     with open(file, "rb") as f:
         data = f.read()
@@ -42,7 +41,6 @@ def parse_date(s):
     """Safely parses a string into a date object, trying multiple formats."""
     if isinstance(s, (date, datetime)):
         return s.date() if isinstance(s, datetime) else s
-    # Try parsing the new format first, then fall back to the old one for existing data
     for fmt in ("%d-%b-%Y", "%Y-%m-%d"):
         try:
             return datetime.strptime(str(s).split(' ')[0], fmt).date()
@@ -67,22 +65,18 @@ def ensure_headers_match(worksheet, expected_headers):
     """Checks and overwrites the header row of a worksheet if it doesn't match the expected list."""
     try:
         current_header = worksheet.row_values(1)
-        # Check if the current header matches the expected header list exactly
         if current_header != expected_headers:
-            # Overwrite the first row with the correct headers
             worksheet.update('A1', [expected_headers])
-            # Clear any cells after the new header in the first row
             if len(current_header) > len(expected_headers):
-                 worksheet.batch_clear([f'{chr(ord("A") + len(expected_headers))}1:Z1'])
+                  worksheet.batch_clear([f'{chr(ord("A") + len(expected_headers))}1:Z1'])
             st.toast(f"✅ Headers updated successfully in '{worksheet.title}'. Reloading data...", icon="🚨")
-            # Force cache clear and rerun to immediately use the correct data schema
             st.cache_resource.clear()
             st.rerun()
     except Exception as e:
         st.error(f"Failed to verify/fix headers in {worksheet.title}: {e}")
 
 # -------------------- GOOGLE SHEETS CONNECTION --------------------
-@st.cache_resource(ttl=600) # Cache for 10 minutes
+@st.cache_resource(ttl=600)
 def get_sheets():
     """Connects to Google Sheets and returns worksheet objects."""
     creds = service_account.Credentials.from_service_account_info(
@@ -99,13 +93,11 @@ def get_sheets():
         try:
             ws = wb.worksheet(ws_title)
         except gspread.exceptions.WorksheetNotFound:
-            # Create sheet if it doesn't exist and append headers
             ws = wb.add_worksheet(title=ws_title, rows="1000", cols="40")
             if headers:
                 ws.append_row(headers)
         return ws
     
-    # MODIFIED: Removed "F.E TP expiry" from the headers list
     heavy_equip_headers = [
         "Equipment type", "Make", "Palte No.", "Asset code", "Owner", "T.P inspection date", "T.P Expiry date",
         "Insurance expiry date", "Operator Name", "Iqama NO", "T.P Card type", "T.P Card Number",
@@ -123,30 +115,23 @@ def get_sheets():
     heavy_equip_sheet = get_or_create(HEAVY_EQUIP_TAB, headers=heavy_equip_headers)
     heavy_vehicle_sheet = get_or_create(HEAVY_VEHICLE_TAB, headers=heavy_vehicle_headers)
 
-    # FIX: Ensure headers are correct for existing sheets
     ensure_headers_match(heavy_equip_sheet, heavy_equip_headers)
     ensure_headers_match(heavy_vehicle_sheet, heavy_vehicle_headers)
-
 
     return obs_sheet, permit_sheet, heavy_equip_sheet, heavy_vehicle_sheet
     
 # -------------------- LOGIN PAGE --------------------
 def login():
-    
-    # This assumes "login_bg.jpg" is in the SAME folder as "app.py"
     IMG_PATH = "login_bg.jpg" 
-
-    img_base64 = get_img_as_base64(IMG_PATH) # Try to get the image
+    img_base64 = get_img_as_base64(IMG_PATH)
     
     background_css = ""
     if img_base64:
-        # Auto-detect file type
         file_extension = os.path.splitext(IMG_PATH)[1].lower()
-        mime_type = file_extension[1:] # remove the dot
+        mime_type = file_extension[1:]
         if mime_type == "jpg":
             mime_type = "jpeg"
 
-        # Create the CSS for the background
         background_css = f"""
         <style>
         [data-testid="stAppViewContainer"] {{
@@ -156,8 +141,6 @@ def login():
             background-repeat: no-repeat;
             background-attachment: fixed;
         }}
-        
-        /* This makes the main content area transparent so the background shows through */
         [data-testid="stAppViewContainer"] > .main {{
             background-color: transparent !important;
         }}
@@ -172,16 +155,12 @@ def login():
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
         box-shadow: none;
-        
         max-width: 200px;
-        
         margin: 4rem auto; 
-        
         padding: 2rem;
         border-radius: 12px;
         text-align: center;
     }}
-    
     .login-title {{
         font-size: 32px; 
         font-weight: 700; 
@@ -189,19 +168,16 @@ def login():
         text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
         margin-bottom: 1.5rem;
     }}
-
     .login-container label {{
         color: white !important;
         text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
     }}
-
     .login-container [data-testid="stTextInput"],
     .login-container [data-testid="stPasswordInput"] {{
         margin-left: auto;
         margin-right: auto;
         width: 100%;
     }}
-
     .login-container .stButton > button {{
         margin: 1rem auto;
         display: block;
@@ -223,7 +199,6 @@ def login():
             st.rerun()
         else:
             st.error("❌ Invalid username or password")
-# -------------------- END OF LOGIN --------------------
 
 # -------------------- SIDEBAR --------------------
 def sidebar():
@@ -264,7 +239,6 @@ def show_equipment_form(sheet):
         tp_expiry = cols_dates[1].date_input("T.P Expiry date").strftime(date_format)
         insurance_expiry = cols_dates[0].date_input("Insurance expiry date").strftime(date_format)
         
-        # MODIFIED: Removed fe_tp_expiry from UI
         tp_card_expiry = cols_dates[1].date_input("T.P Card expiry date").strftime(date_format)
 
         st.subheader("T.P Card & Status")
@@ -277,7 +251,6 @@ def show_equipment_form(sheet):
         documents = cols_status[1].text_input("Documents")
 
         if st.form_submit_button("Submit", use_container_width=True):
-            # MODIFIED: Data list aligns with the new 17-column header
             data = [
                 equipment_type, make, plate_no, asset_code, owner, tp_insp_date, tp_expiry,
                 insurance_expiry, operator_name, iqama_no, tp_card_type, tp_card_number,
@@ -285,12 +258,12 @@ def show_equipment_form(sheet):
             ]
             
             try:
-                sheet.append_row(data)
+                # Good practice to use USER_ENTERED here as well for consistency
+                sheet.append_row(data, value_input_option="USER_ENTERED")
                 st.success("✅ Equipment submitted successfully!")
             except Exception as e:
                 st.error(f"❌ Error submitting data: {e}")
 
-#--------------------------------------------------------------- HSE OBSERVATION FORM-----------------------------------------------------------------------------------------------
 def show_observation_form(sheet):
     st.header("📋 Daily HSE Site Observation Entry Form")
     
@@ -371,7 +344,7 @@ def show_observation_form(sheet):
             category = st.selectbox("Category", CATEGORIES)
             
         with col2:
-            well_no = st.selectbox("Well No", ALL_SITES) # Uses the master ALL_SITES list
+            well_no = st.selectbox("Well No", ALL_SITES)
             supervisor_name = st.selectbox("Supervisor Name", supervisor_names)
             trade = SUPERVISOR_TRADE_MAP.get(supervisor_name, "")
             discipline = st.text_input("Discipline", value=trade, disabled=True)
@@ -395,7 +368,7 @@ def show_observation_form(sheet):
                 status
             ]
             try:
-                sheet.append_row(data)
+                sheet.append_row(data, value_input_option="USER_ENTERED")
                 st.success("✅ Observation submitted successfully!")
             except Exception as e:
                 st.error(f"❌ Error submitting data: {e}")
@@ -481,7 +454,7 @@ def show_permit_form(sheet):
         
         with col1:
             date_val = st.date_input("Date")
-            drill_site = st.selectbox("Drill Site", ALL_SITES) # Uses the master ALL_SITES list
+            drill_site = st.selectbox("Drill Site", ALL_SITES)
             work_location = st.selectbox("Work Location", WORK_LOCATIONS)
             permit_receiver = st.selectbox("Permit Receiver", PERMIT_RECEIVERS)
 
@@ -494,22 +467,22 @@ def show_permit_form(sheet):
 
         if st.form_submit_button("Submit"):
             data = [
-                date_val.strftime("%d-%b-%Y"), # Column A: DATE
-                drill_site,                    # Column B: DRILL SITE
-                work_location,                 # Column C: WORK LOCATION
-                permit_no,                     # Column D: PERMIT NO
-                permit_type,                   # Column E: TYPE OF PERMIT
-                activity,                      # Column F: ACTIVITY
-                permit_receiver,               # Column G: PERMIT RECEIVER
-                permit_issuer                  # Column H: PERMIT ISSUER
+                date_val.strftime("%d-%b-%Y"),
+                drill_site,
+                work_location,
+                permit_no,
+                permit_type,
+                activity,
+                permit_receiver,
+                permit_issuer
             ]
             try:
-                sheet.append_row(data)
+                sheet.append_row(data, value_input_option="USER_ENTERED")
                 st.success("✅ Permit submitted successfully!")
             except Exception as e:
                 st.error(f"❌ Error submitting data: {e}")
 
-
+# -------------------- CORRECTED HEAVY VEHICLE FORM --------------------
 def show_heavy_vehicle_form(sheet):
     st.header("🚚 Heavy Vehicle Entry Form")
     VEHICLE_LIST = ["Bus", "Dump Truck", "Low Bed", "Trailer", "Water Tanker", "Mini Bus", "Flat Truck"]
@@ -527,11 +500,13 @@ def show_heavy_vehicle_form(sheet):
         iqama_no = c2.text_input("Iqama No")
 
         st.subheader("Expiry Dates")
-        d1, d2 = st.columns(2)
+        # FIXED: Used 3 columns to avoid stacking inputs and confusing the UI
+        d1, d2, d3 = st.columns(3)
         date_format = "%d-%b-%Y"
+        
         mvpi_expiry = d1.date_input("MVPI Expiry date").strftime(date_format)
         insurance_expiry = d2.date_input("Insurance Expiry").strftime(date_format)
-        licence_expiry = d1.date_input("Licence Expiry").strftime(date_format)
+        licence_expiry = d3.date_input("Licence Expiry").strftime(date_format)
 
         st.subheader("Condition & Status")
         s1, s2 = st.columns(2)
@@ -544,7 +519,6 @@ def show_heavy_vehicle_form(sheet):
         remarks = st.text_area("Remarks")
 
         if st.form_submit_button("Submit"):
-            # This form did not contain F.E TP expiry, so no change to the data list is needed
             data = [
                 vehicle_type, make, plate_no, asset_code, owner,
                 mvpi_expiry, insurance_expiry,
@@ -554,12 +528,14 @@ def show_heavy_vehicle_form(sheet):
                 suspension_systems, remarks
             ]
             try:
-                sheet.append_row(data)
+                # CRITICAL FIX: value_input_option="USER_ENTERED" forces Google Sheets 
+                # to parse the date string (e.g., "15-Jan-2025") into a real Date object.
+                sheet.append_row(data, value_input_option="USER_ENTERED")
                 st.success("✅ Heavy Vehicle submitted successfully!")
             except Exception as e:
                 st.error(f"❌ Error: {e}")
 
-# -------------------- ADVANCED DASHBOARD (MODIFIED) --------------------
+# -------------------- ADVANCED DASHBOARD --------------------
 def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_vehicle_sheet):
     st.header("📊 Dashboard")
     tab_obs, tab_permit, tab_eqp, tab_veh = st.tabs([
@@ -577,13 +553,12 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             df_obs.columns = [str(col).strip().upper() for col in df_obs.columns]
         except gspread.exceptions.GSpreadException as e:
             st.error(f"Could not load observation data from Google Sheets: {e}")
-            return # Use return to stop execution of this tab only
+            return 
 
         if df_obs.empty:
             st.info("No observation data available to display.")
             return
 
-        # --- Data Cleaning and Preparation ---
         if 'DATE' not in df_obs.columns:
             st.warning("The 'DATE' column is missing from the Observation Log sheet.")
             return
@@ -597,8 +572,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         if 'STATUS' in df_obs.columns:
             df_obs['STATUS'] = df_obs['STATUS'].str.strip().str.capitalize()
 
-
-        # --- Interactive Filters ---
         st.markdown("#### Filter & Explore")
         with st.expander("Adjust Filters", expanded=True):
             col_filter1_obs, col_filter2_obs = st.columns(2)
@@ -621,7 +594,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 status_options = df_obs['STATUS'].unique() if 'STATUS' in df_obs.columns else []
                 selected_status = st.multiselect("Filter by Status", options=status_options, default=status_options)
 
-        # --- Apply Filters to DataFrame ---
         start_date_obs, end_date_obs = date_range_obs if len(date_range_obs) == 2 else (min_date_obs, max_date_obs)
         start_datetime_obs = pd.to_datetime(start_date_obs)
         end_datetime_obs = pd.to_datetime(end_date_obs)
@@ -638,7 +610,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             st.warning("No data matches the selected filters.")
             return
 
-        # --- High-Level KPIs ---
         st.markdown("---")
         st.markdown("#### Key Metrics Overview")
 
@@ -660,7 +631,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         kpi4_obs.metric("Busiest Day", busiest_day_obs)
         st.markdown("---")
 
-        # --- Visualizations ---
         st.markdown("#### Visual Insights")
         col_viz1_obs, col_viz2_obs = st.columns(2)
 
@@ -697,7 +667,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         with col_viz2_obs:
             if 'STATUS' in df_filtered_obs.columns:
                 st.write("**Observation Status**")
-                status_color_map = {'Open': '#E74C3C', 'Close': '#2ECC71'} # Adjusted "CLOSE" to "Close"
+                status_color_map = {'Open': '#E74C3C', 'Close': '#2ECC71'}
                 status_counts = df_filtered_obs['STATUS'].value_counts().reset_index()
 
                 fig_status_pie = px.pie(
@@ -723,7 +693,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 fig_obs_bar.update_layout(yaxis={'categoryorder':'total ascending'}, margin=dict(l=20, r=20, t=30, b=20))
                 st.plotly_chart(fig_obs_bar, use_container_width=True)
         
-        # --- Time Series Analysis ---
         st.markdown("---")
         st.write("#### Observation Trend Over Time")
         obs_by_day = df_filtered_obs.groupby(df_filtered_obs['DATE'].dt.date).size().reset_index(name='count')
@@ -735,7 +704,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         fig_time_obs.update_layout(margin=dict(l=20, r=20, t=30, b=20))
         st.plotly_chart(fig_time_obs, use_container_width=True)
         
-        # --- Supervisor Analysis ---
         if 'SUPERVISOR NAME' in df_filtered_obs.columns and 'CLASSIFICATION' in df_filtered_obs.columns:
             st.write("#### Unsafe Observations by Supervisor")
             df_unsafe = df_filtered_obs[df_filtered_obs['CLASSIFICATION'].isin(['UNSAFE ACT', 'UNSAFE CONDITION'])]
@@ -761,8 +729,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             else:
                 st.info("No 'Unsafe Act' or 'Unsafe Condition' observations found in the selected filter range.")
 
-
-        # --- Full Data Table ---
         st.markdown("---")
         st.markdown("#### Detailed Observation Log (Filtered)")
         df_display_obs = df_filtered_obs.copy()
@@ -783,7 +749,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             st.info("No permit data available to display.")
             return
 
-        # --- Data Cleaning and Preparation ---
         if 'DATE' not in df_permit.columns:
             st.warning("The 'DATE' column is missing from the Permit Log sheet.")
             return
@@ -792,7 +757,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         df_permit.dropna(subset=['DATE'], inplace=True)
         df_permit = df_permit.sort_values(by='DATE', ascending=False)
 
-        # --- Interactive Filters ---
         st.markdown("#### Filter & Explore")
         with st.expander("Adjust Filters", expanded=True):
             col_filter1, col_filter2 = st.columns(2)
@@ -815,7 +779,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 issuers = df_permit['PERMIT ISSUER'].unique() if 'PERMIT ISSUER' in df_permit.columns else []
                 selected_issuers = st.multiselect("Filter by Permit Issuer", options=issuers, default=issuers)
 
-        # --- Apply Filters to DataFrame ---
         start_date, end_date = date_range if len(date_range) == 2 else (min_date, max_date)
         start_datetime = pd.to_datetime(start_date)
         end_datetime = pd.to_datetime(end_date)
@@ -832,7 +795,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             st.warning("No data matches the selected filters.")
             return
 
-        # --- High-Level KPIs ---
         st.markdown("---")
         st.markdown("#### Key Metrics Overview")
 
@@ -852,7 +814,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         kpi4.metric("Active Permit Receivers", f"{active_receivers}")
         st.markdown("---")
 
-        # --- Visualizations ---
         st.markdown("#### Visual Insights")
         col_viz1, col_viz2 = st.columns(2)
 
@@ -940,7 +901,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 fig_receiver.update_layout(yaxis={'categoryorder':'total ascending'}, margin=dict(l=20, r=20, t=30, b=20))
                 st.plotly_chart(fig_receiver, use_container_width=True)
                 
-        # --- Time Series Analysis ---
         st.markdown("---")
         st.write("#### Permit Trend Over Time")
         permits_by_day = df_filtered.groupby(df_filtered['DATE'].dt.date).size().reset_index(name='count')
@@ -959,7 +919,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         fig_time.update_layout(margin=dict(l=20, r=20, t=30, b=20))
         st.plotly_chart(fig_time, use_container_width=True)
 
-        # --- Full Data Table ---
         st.markdown("---")
         st.markdown("#### Detailed Permit Log (Filtered)")
         df_display_permit = df_filtered.copy()
@@ -980,13 +939,11 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             st.info("No Heavy Equipment data available to display.")
             return
 
-        # MODIFIED: Removed "F.E TP EXPIRY" from date_cols_eq
         date_cols_eq = ["T.P EXPIRY DATE", "INSURANCE EXPIRY DATE", "T.P CARD EXPIRY DATE"]
         for col in date_cols_eq:
                 if col in df_equip.columns:
                     df_equip[col] = df_equip[col].apply(parse_date)
 
-        # --- EXPIRY TRACKING TABLE ---
         st.subheader("🚨 Equipment Document Expiry Alerts")
 
         id_cols_eq = ["EQUIPMENT TYPE", "PALTE NO.", "OWNER", "OPERATOR NAME"]
@@ -1026,7 +983,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 final_cols_eq = [col for col in display_cols_eq if col in df_alerts_eq.columns]
                 
                 st.dataframe(df_alerts_eq[final_cols_eq], use_container_width=True, hide_index=True)
-        # --- END OF TABLE ---
 
         st.markdown("---")
 
@@ -1085,7 +1041,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         
         st.dataframe(df_display_eq, use_container_width=True, hide_index=True)
 
-    # -------------------- START: NEW HEAVY VEHICLE TAB --------------------
+    # -------------------- HEAVY VEHICLE TAB --------------------
     with tab_veh:
         st.subheader("🚚 Heavy Vehicle Analytics")
         try:
@@ -1099,7 +1055,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             st.info("No Heavy Vehicle data available to display.")
             return
 
-        # --- Data Cleaning ---
         date_cols_veh = ["MVPI EXPIRY DATE", "INSURANCE EXPIRY", "LICENCE EXPIRY"]
         for col in date_cols_veh:
             if col in df_veh.columns:
@@ -1110,7 +1065,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
              if col in df_veh.columns:
                  df_veh[col] = df_veh[col].str.strip().str.capitalize()
 
-        # --- Filters ---
         st.markdown("#### Filter & Explore")
         with st.expander("Adjust Filters", expanded=True):
             col_f1_veh, col_f2_veh = st.columns(2)
@@ -1121,7 +1075,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             owner_options_veh = df_veh['OWNER'].unique() if 'OWNER' in df_veh.columns else []
             selected_owners_veh = col_f2_veh.multiselect("Filter by Owner", options=owner_options_veh, default=owner_options_veh)
 
-        # --- Apply Filters ---
         mask_veh = pd.Series(True, index=df_veh.index)
         if selected_types_veh and 'VEHICLE TYPE' in df_veh.columns:
             mask_veh &= df_veh['VEHICLE TYPE'].isin(selected_types_veh)
@@ -1134,7 +1087,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             st.warning("No data matches the selected filters.")
             return
 
-        # --- Expiry Table ---
         st.subheader("🚨 Vehicle Document Expiry Alerts")
         id_cols_veh = ["VEHICLE TYPE", "PLATE NO", "OWNER", "DRIVER NAME"]
         
@@ -1163,11 +1115,9 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 display_cols_veh = ["VEHICLE TYPE", "PLATE NO", "Document Type", "Expiry Date", "Status", "DRIVER NAME", "OWNER"]
                 final_cols_veh = [col for col in display_cols_veh if col in df_alerts_veh.columns]
                 st.dataframe(df_alerts_veh[final_cols_veh], use_container_width=True, hide_index=True)
-        # --- END OF TABLE ---
 
         st.markdown("---")
 
-        # --- KPIs ---
         total_vehicles = len(df_filtered_veh)
         expired_count_veh = 0
         expiring_soon_count_veh = 0
@@ -1183,7 +1133,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         
         st.markdown("---")
         
-        # --- Charts ---
         st.subheader("Visual Insights")
         c1_veh, c2_veh = st.columns(2)
 
@@ -1215,7 +1164,6 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             )
             st.plotly_chart(fig_tyre, use_container_width=True)
         
-        # --- Full Table ---
         st.markdown("---")
         st.subheader("Full Heavy Vehicle Data (Filtered)")
         df_display_veh = df_filtered_veh.copy()
@@ -1225,23 +1173,18 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         
         st.dataframe(df_display_veh, use_container_width=True, hide_index=True)
 
-    # -------------------- END: NEW HEAVY VEHICLE TAB --------------------
-
 # -------------------- MAIN APP --------------------
 def main():
     st.set_page_config(page_title="Onsite Reporting System", layout="wide")
     
-    # Check session state for login status
     if "logged_in" not in st.session_state:
         st.session_state.logged_in = False
 
     if not st.session_state.logged_in:
         login()
-        return # Stop execution if not logged in
+        return
 
-    # --- Main app logic runs only if logged in ---
     try:
-        # get_sheets() now includes the header verification/fix logic
         obs_sheet, permit_sheet, heavy_equip_sheet, heavy_vehicle_sheet = get_sheets()
     except Exception as e:
         st.error(f"Failed to connect to Google Sheets. Please check your connection and secrets.")
@@ -1249,7 +1192,7 @@ def main():
         if st.button("Logout"):
             st.session_state.clear()
             st.rerun()
-        return # Stop if sheets can't be loaded
+        return
 
     choice = sidebar()
 
@@ -1282,15 +1225,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
-
-
-
-
-
