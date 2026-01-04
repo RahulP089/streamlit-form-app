@@ -38,12 +38,28 @@ def get_img_as_base64(file):
     return base64.b64encode(data).decode()
 
 def parse_date(s):
-    """Safely parses a string into a date object, trying multiple formats."""
+    """Safely parses a string into a date object, robust against formats."""
+    if pd.isna(s) or s == "":
+        return None
     if isinstance(s, (date, datetime)):
         return s.date() if isinstance(s, datetime) else s
-    for fmt in ("%d-%b-%Y", "%Y-%m-%d"):
+    
+    # Clean string
+    s = str(s).strip()
+    
+    # Try standard formats
+    formats = [
+        "%Y-%m-%d",  # 2026-01-04 (ISO - Preferred)
+        "%d-%b-%Y",  # 04-Jan-2026
+        "%d/%m/%Y",  # 04/01/2026
+        "%m/%d/%Y",  # 01/04/2026
+        "%d-%m-%Y"   # 04-01-2026
+    ]
+    
+    for fmt in formats:
         try:
-            return datetime.strptime(str(s).split(' ')[0], fmt).date()
+            # .split(' ')[0] handles cases where time is included like "2026-01-04 12:00:00"
+            return datetime.strptime(s.split(' ')[0], fmt).date()
         except (ValueError, TypeError):
             continue
     return None
@@ -53,7 +69,8 @@ def badge_expiry(d, expiry_days=30):
     if d is None:
         return "⚪ Not Set"
     today = date.today()
-    date_str = d.strftime('%d-%b-%Y')
+    # Format for display only
+    date_str = d.strftime('%Y-%m-%d')
     if d < today:
         return f"🚨 Expired ({date_str})"
     elif d <= today + timedelta(days=expiry_days):
@@ -67,6 +84,7 @@ def ensure_headers_match(worksheet, expected_headers):
         current_header = worksheet.row_values(1)
         if current_header != expected_headers:
             worksheet.update('A1', [expected_headers])
+            # Clear trailing columns if any
             if len(current_header) > len(expected_headers):
                   worksheet.batch_clear([f'{chr(ord("A") + len(expected_headers))}1:Z1'])
             st.toast(f"✅ Headers updated successfully in '{worksheet.title}'. Reloading data...", icon="🚨")
@@ -216,6 +234,8 @@ def sidebar():
         return menu
 
 # -------------------- FORMS --------------------
+# NOTE: All forms now use "%Y-%m-%d" (e.g. 2026-01-04) to prevent date parsing errors
+
 def show_equipment_form(sheet):
     st.header("🚜 Heavy Equipment Entry Form")
     EQUIPMENT_LIST = [
@@ -234,11 +254,12 @@ def show_equipment_form(sheet):
 
         st.subheader("Expiry Dates")
         cols_dates = st.columns(2)
-        date_format = "%d-%b-%Y"
+        # Using ISO format for reliability
+        date_format = "%Y-%m-%d"
+        
         tp_insp_date = cols_dates[0].date_input("T.P inspection date").strftime(date_format)
         tp_expiry = cols_dates[1].date_input("T.P Expiry date").strftime(date_format)
         insurance_expiry = cols_dates[0].date_input("Insurance expiry date").strftime(date_format)
-        
         tp_card_expiry = cols_dates[1].date_input("T.P Card expiry date").strftime(date_format)
 
         st.subheader("T.P Card & Status")
@@ -256,9 +277,7 @@ def show_equipment_form(sheet):
                 insurance_expiry, operator_name, iqama_no, tp_card_type, tp_card_number,
                 tp_card_expiry, qr_code, pwas_status, fa_box_status, documents
             ]
-            
             try:
-                # Good practice to use USER_ENTERED here as well for consistency
                 sheet.append_row(data, value_input_option="USER_ENTERED")
                 st.success("✅ Equipment submitted successfully!")
             except Exception as e:
@@ -355,7 +374,7 @@ def show_observation_form(sheet):
 
         if st.form_submit_button("Submit"):
             data = [
-                form_date.strftime("%d-%b-%Y"),
+                form_date.strftime("%Y-%m-%d"), # ISO Format
                 well_no,
                 area,
                 observer_name,
@@ -467,7 +486,7 @@ def show_permit_form(sheet):
 
         if st.form_submit_button("Submit"):
             data = [
-                date_val.strftime("%d-%b-%Y"),
+                date_val.strftime("%Y-%m-%d"), # ISO Format
                 drill_site,
                 work_location,
                 permit_no,
@@ -482,7 +501,6 @@ def show_permit_form(sheet):
             except Exception as e:
                 st.error(f"❌ Error submitting data: {e}")
 
-# -------------------- CORRECTED HEAVY VEHICLE FORM --------------------
 def show_heavy_vehicle_form(sheet):
     st.header("🚚 Heavy Vehicle Entry Form")
     VEHICLE_LIST = ["Bus", "Dump Truck", "Low Bed", "Trailer", "Water Tanker", "Mini Bus", "Flat Truck"]
@@ -500,9 +518,8 @@ def show_heavy_vehicle_form(sheet):
         iqama_no = c2.text_input("Iqama No")
 
         st.subheader("Expiry Dates")
-        # FIXED: Used 3 columns to avoid stacking inputs and confusing the UI
         d1, d2, d3 = st.columns(3)
-        date_format = "%d-%b-%Y"
+        date_format = "%Y-%m-%d" # Using ISO format to ensure "Data comes" correctly
         
         mvpi_expiry = d1.date_input("MVPI Expiry date").strftime(date_format)
         insurance_expiry = d2.date_input("Insurance Expiry").strftime(date_format)
@@ -528,8 +545,6 @@ def show_heavy_vehicle_form(sheet):
                 suspension_systems, remarks
             ]
             try:
-                # CRITICAL FIX: value_input_option="USER_ENTERED" forces Google Sheets 
-                # to parse the date string (e.g., "15-Jan-2025") into a real Date object.
                 sheet.append_row(data, value_input_option="USER_ENTERED")
                 st.success("✅ Heavy Vehicle submitted successfully!")
             except Exception as e:
@@ -563,7 +578,14 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             st.warning("The 'DATE' column is missing from the Observation Log sheet.")
             return
 
-        df_obs['DATE'] = pd.to_datetime(df_obs['DATE'], errors='coerce')
+        # FIXED: Use dayfirst=True to handle dd/mm/yyyy correctly
+        df_obs['DATE'] = pd.to_datetime(df_obs['DATE'], dayfirst=True, errors='coerce')
+        
+        # Check if dates were lost during conversion
+        if df_obs['DATE'].isna().all():
+             st.error("⚠️ All dates failed to load. Please check the 'Date' column format in your Google Sheet.")
+             return
+
         df_obs.dropna(subset=['DATE'], inplace=True)
         df_obs = df_obs.sort_values(by='DATE', ascending=False)
         
@@ -732,7 +754,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         st.markdown("---")
         st.markdown("#### Detailed Observation Log (Filtered)")
         df_display_obs = df_filtered_obs.copy()
-        df_display_obs['DATE'] = df_display_obs['DATE'].dt.strftime('%d-%b-%Y')
+        df_display_obs['DATE'] = df_display_obs['DATE'].dt.strftime('%Y-%m-%d')
         st.dataframe(df_display_obs, use_container_width=True, hide_index=True)
 
     # -------------------- PERMIT TAB --------------------
@@ -753,7 +775,8 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
             st.warning("The 'DATE' column is missing from the Permit Log sheet.")
             return
 
-        df_permit['DATE'] = pd.to_datetime(df_permit['DATE'], errors='coerce')
+        # FIXED: Use dayfirst=True
+        df_permit['DATE'] = pd.to_datetime(df_permit['DATE'], dayfirst=True, errors='coerce')
         df_permit.dropna(subset=['DATE'], inplace=True)
         df_permit = df_permit.sort_values(by='DATE', ascending=False)
 
@@ -922,7 +945,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
         st.markdown("---")
         st.markdown("#### Detailed Permit Log (Filtered)")
         df_display_permit = df_filtered.copy()
-        df_display_permit['DATE'] = df_display_permit['DATE'].dt.strftime('%d-%b-%Y')
+        df_display_permit['DATE'] = df_display_permit['DATE'].dt.strftime('%Y-%m-%d')
         st.dataframe(df_display_permit, use_container_width=True, hide_index=True)
 
     # -------------------- HEAVY EQUIPMENT TAB --------------------
@@ -971,7 +994,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                     lambda d: "🚨 Expired" if d < today else "⚠️ Expiring Soon"
                 )
                 
-                df_alerts_eq['Expiry Date'] = df_alerts_eq['Expiry Date'].apply(lambda d: d.strftime('%d-%b-%Y'))
+                df_alerts_eq['Expiry Date'] = df_alerts_eq['Expiry Date'].apply(lambda d: d.strftime('%Y-%m-%d'))
                 
                 df_alerts_eq = df_alerts_eq.sort_values(by=["Status", "Expiry Date"])
                 
@@ -1109,7 +1132,7 @@ def show_combined_dashboard(obs_sheet, permit_sheet, heavy_equip_sheet, heavy_ve
                 st.success("✅ No vehicle documents are expired or expiring within 30 days.")
             else:
                 df_alerts_veh['Status'] = df_alerts_veh['Expiry Date'].apply(lambda d: "🚨 Expired" if d < today else "⚠️ Expiring Soon")
-                df_alerts_veh['Expiry Date'] = df_alerts_veh['Expiry Date'].apply(lambda d: d.strftime('%d-%b-%Y'))
+                df_alerts_veh['Expiry Date'] = df_alerts_veh['Expiry Date'].apply(lambda d: d.strftime('%Y-%m-%d'))
                 df_alerts_veh = df_alerts_veh.sort_values(by=["Status", "Expiry Date"])
                 
                 display_cols_veh = ["VEHICLE TYPE", "PLATE NO", "Document Type", "Expiry Date", "Status", "DRIVER NAME", "OWNER"]
